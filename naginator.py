@@ -4,9 +4,7 @@ import sys
 import os
 import subprocess
 import json
-import pprint
 import hashlib
-import pprint
 from string import Template
 from optparse import OptionParser
 import UserDict
@@ -163,7 +161,7 @@ def get_hostextinfo_config():
         s = Template(hostextinfo_template)
         hostextinfo['parameters']['host_name'] = hostextinfo['certname']
         param_prefill = Chainmap(hostextinfo['parameters'],
-            hostextinfo_defaults)
+                                 hostextinfo_defaults)
         hostextinfo_config += s.safe_substitute(param_prefill)
     return hostextinfo_config
 
@@ -227,8 +225,8 @@ def get_config():
         people would..
     """
     config = (get_hosts_config() + get_hostextinfo_config()
-    + get_contacts_config() + get_contactgroups_config()
-    + get_services_config() + get_commands_config())
+              + get_contacts_config() + get_contactgroups_config()
+              + get_services_config() + get_commands_config())
     return config
 
 
@@ -238,7 +236,7 @@ def write_config(data, config="/etc/nagios3/naginator.cfg"):
         with open(config, 'r') as f:
             local_config = f.read()
         if (hashlib.md5(data).hexdigest() !=
-            hashlib.md5(local_config).hexdigest()):
+           hashlib.md5(local_config).hexdigest()):
             os.rename(config, config + '.bak')
             with open(config, 'w') as f:
                 f.write(data)
@@ -253,8 +251,8 @@ def reload_nagios():
     """ Reload nagios if nagios config is sane. """
     sanity = subprocess.Popen(["/usr/sbin/nagios3", "-v",
                                "/etc/nagios3/nagios.cfg"],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
     output, err = sanity.communicate()
     if sanity.poll() != 0:
         print """Sanity check of Nagios failed.
@@ -265,7 +263,7 @@ def reload_nagios():
     else:
         do_reload = subprocess.Popen(["/etc/init.d/nagios3",
                                       "reload"], stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE)
+                                     stderr=subprocess.PIPE)
         output, err = do_reload.communicate()
         if do_reload.poll() != 0:
             print "Reloading Nagios failed, please fix:\r"
