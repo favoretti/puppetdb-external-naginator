@@ -276,12 +276,18 @@ usage = "usage: %prog [options] arg --hostname=host"
 parser = OptionParser(usage)
 parser.add_option("-i", "--hostname", dest="hostname",
                   help="Hostname or IP of PuppetDB host.")
+parser.add_option("--stdout", action="store_true", default=False,
+        help="Output configuration to stdout.")
 (options, args) = parser.parse_args()
 
 if __name__ == "__main__":
     if options.hostname:
         url = "http://" + options.hostname + ":8080/resources"
-        write_config(get_config())
     else:
         print "Please provide a hostname."
         sys.exit(1)
+
+    if options.stdout:
+        print get_config()
+    else:
+        write_config(get_config())
