@@ -272,13 +272,14 @@ def reload_nagios():
         else:
             return True
 
-usage = "usage: %prog [options] arg --hostname=host"
-parser = OptionParser(usage)
-parser.add_option("-i", "--hostname", dest="hostname",
-                  help="Hostname or IP of PuppetDB host.")
-(options, args) = parser.parse_args()
 
 if __name__ == "__main__":
+    usage = "usage: %prog [options] arg --hostname=host"
+    parser = OptionParser(usage)
+    parser.add_option("-i", "--hostname", dest="hostname",
+                      help="Hostname or IP of PuppetDB host.")
+    (options, args) = parser.parse_args()
+
     if options.hostname:
         url = "http://" + options.hostname + ":8080/resources"
         write_config(get_config())
