@@ -59,30 +59,6 @@ define service {
 }
 """
 
-command_template = """
-define command {
-        command_line                   ${command_line}
-        command_name                   ${command_name}
-}
-"""
-
-contact_template = """
-define contact {
-        alias                          ${alias}
-        contact_name                   ${contact_name}
-        email                          ${email}
-        use                            ${use}
-}
-"""
-
-contactgroup_template = """
-define contactgroup {
-        alias                          ${alias}
-        contactgroup_name              ${contactgroup_name}
-        members                        ${members}
-}
-"""
-
 hostextinfo_template = """
 define hostextinfo {
         host_name                      ${host_name}
@@ -148,6 +124,12 @@ def get_generic_config(dtype):
     return jinja2.Template(TMPL).render(dtype=dtype, elements=elements)
 
 
+def merge_dicts(values, defaults):
+    """Given two dicts, use items in 'defaults' as default values for 'values'.
+    """
+    return dict( defaults.items() + values.items() )
+
+
 def add_default_parameters(dtype, element):
     if dtype == 'host':
         element['parameters']['host_name'] = element['parameters']['alias']
@@ -155,6 +137,11 @@ def add_default_parameters(dtype, element):
         element['parameters']['contact_name'] = element['title']
     if dtype == 'contactgroup':
         element['parameters']['contactgroup_name'] = element['title']
+    if dtype == 'command':
+        element['parameters']['command_name'] = element['title']
+    if dtype == 'hostextinfo':
+        element['parameters']['host_name'] = element['certname']
+        element['parameters'] = merge_dicts(element['parameters'], hostextinfo_defaults)
 
     return element
 
@@ -168,24 +155,12 @@ def get_contact_config():
 def get_contactgroup_config():
     return get_generic_config('contactgroup')
 
-
-
-
-
+def get_command_config():
+    return get_generic_config('command')
 
 def get_hostextinfo_config():
-    """ To fetch and parse hostextinfo configuration.
+    return get_generic_config('hostextinfo')
 
-        Todo: Merge into one method.."""
-    hostextinfos = get_nagios_data('hostextinfo')
-    hostextinfo_config = ''
-    for hostextinfo in hostextinfos:
-        s = Template(hostextinfo_template)
-        hostextinfo['parameters']['host_name'] = hostextinfo['certname']
-        param_prefill = Chainmap(hostextinfo['parameters'],
-                                 hostextinfo_defaults)
-        hostextinfo_config += s.safe_substitute(param_prefill)
-    return hostextinfo_config
 
 
 
@@ -202,19 +177,6 @@ def get_services_config():
     return services_config
 
 
-def get_commands_config():
-    """ To fetch and parse commands configuration.
-
-        Todo: Merge into one method.."""
-    commands = get_nagios_data('command')
-    commands_config = ''
-    for command in commands:
-        command['parameters']['command_name'] = command['title']
-        s = Template(command_template)
-        commands_config += s.safe_substitute(command['parameters'])
-    return commands_config
-
-
 def get_config():
     """ This simply concatenates all data into one.
 
@@ -223,7 +185,7 @@ def get_config():
     """
     config = (get_hosts_config() + get_hostextinfo_config()
               + get_contact_config() + get_contactgroup_config()
-              + get_services_config() + get_commands_config())
+              + get_services_config() + get_command_config())
     return config
 
 

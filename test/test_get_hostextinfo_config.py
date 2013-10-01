@@ -40,5 +40,6 @@ define hostextinfo {
         icon_image_alt                 alt text for bbbb
         statusmap_image                some statusmap for bbbb
 }
+
 """
 
