@@ -1,4 +1,4 @@
-from naginator import get_command_config
+from naginator import get_config
 from mock import *
 
 
@@ -26,7 +26,7 @@ def mock_get_nagios_data(__):
 
 @patch('naginator.get_nagios_data', mock_get_nagios_data)
 def test_get_commands_config():
-    assert get_command_config() == """
+    assert get_config('command') == """
 define command {
         command_line                   $USER1$/check_snmp_load.pl -H $HOSTADDRESS$ -C soft_secure -w $ARG1$ -c $ARG2$ -T netsl -f
         command_name                   command_check_load

@@ -1,4 +1,4 @@
-from naginator import get_hostextinfo_config
+from naginator import get_config
 from mock import *
 
 def mock_get_nagios_data(__):
@@ -26,7 +26,7 @@ def mock_get_nagios_data(__):
 
 @patch('naginator.get_nagios_data', mock_get_nagios_data)
 def test_get_hostextinfo_config():
-    assert get_hostextinfo_config() == """
+    assert get_config('hostextinfo') == """
 define hostextinfo {
         host_name                      aaaa.ofi.lan
         icon_image                     some icon for aaaa

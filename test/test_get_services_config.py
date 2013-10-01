@@ -1,4 +1,4 @@
-from naginator import get_service_config
+from naginator import get_config
 from mock import *
 
 
@@ -39,7 +39,7 @@ def mock_get_nagios_data(__):
 
 @patch('naginator.get_nagios_data', mock_get_nagios_data)
 def test_get_services_config():
-    assert get_service_config() == """
+    assert get_config('service') == """
 define service {
         check_command                  check_load!10,15,15!20,25,25
         host_name                      aaaa.ofi.lan

@@ -1,4 +1,4 @@
-from naginator import get_hosts_config
+from naginator import get_config
 from mock import *
 
 
@@ -31,7 +31,7 @@ def mock_get_nagios_data(__):
 
 @patch('naginator.get_nagios_data', mock_get_nagios_data)
 def test_get_hosts_config():
-    assert get_hosts_config() == """
+    assert get_config('host') == """
 define host {
         address                        172.20.4.20
         alias                          aaaa.ofi

@@ -76,7 +76,7 @@ def get_nagios_data(dtype, exported=True, tag=''):
 
 
 
-def get_generic_config(dtype):
+def get_config(dtype):
     """Returns a python object with Nagios objects of type 'dtype'.
 
     dtype:  type of the Nagios objects to retrieve.
@@ -111,36 +111,16 @@ def add_default_parameters(dtype, element):
     return element
 
 
-def get_hosts_config():
-    return get_generic_config('host')
-
-def get_contact_config():
-    return get_generic_config('contact')
-
-def get_contactgroup_config():
-    return get_generic_config('contactgroup')
-
-def get_command_config():
-    return get_generic_config('command')
-
-def get_hostextinfo_config():
-    return get_generic_config('hostextinfo')
-
-def get_service_config():
-    return get_generic_config('service')
 
 
-
-def get_config():
+def get_all_config():
     """ This simply concatenates all data into one.
 
         Todo: Do this nice and neat as normal python
         people would..
     """
-    config = (get_hosts_config() + get_hostextinfo_config()
-              + get_contact_config() + get_contactgroup_config()
-              + get_service_config() + get_command_config())
-    return config
+    return (get_config('hosts') + get_config('hostextinfo') + get_config('contact')
+            + get_config('contactgroup') + get_config(service) + get_config('command'))
 
 
 def write_config(data, config="/etc/nagios3/naginator.cfg"):
@@ -191,6 +171,9 @@ if __name__ == "__main__":
     parser = OptionParser(usage)
     parser.add_option("-i", "--hostname", dest="hostname",
                       help="Hostname or IP of PuppetDB host.")
+    parser.add_option("--stdout", action="store_true", default=False,
+                      help="Output configuration to stdout.")
+
     (options, args) = parser.parse_args()
 
     if options.hostname:
@@ -200,6 +183,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if options.stdout:
-        print get_config()
+        print get_all_config()
     else:
-        write_config(get_config())
+        write_config(get_all_config())
