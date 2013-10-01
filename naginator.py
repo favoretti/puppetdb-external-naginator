@@ -282,7 +282,11 @@ if __name__ == "__main__":
 
     if options.hostname:
         url = "http://" + options.hostname + ":8080/resources"
-        write_config(get_config())
     else:
         print "Please provide a hostname."
         sys.exit(1)
+
+    if options.stdout:
+        print get_config()
+    else:
+        write_config(get_config())
