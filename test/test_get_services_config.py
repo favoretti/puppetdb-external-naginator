@@ -1,26 +1,6 @@
-from naginator import get_services_config
+from naginator import get_service_config
 from mock import *
 
-# {"certname":   "the certname of the associated host",
-#  "resource":   "the resource's unique hash",
-#  "type":       "File",
-#  "title":      "/etc/hosts",
-#  "exported":   "true",
-#  "tags":       ["foo", "bar"],
-#  "sourcefile": "/etc/puppet/manifests/site.pp",
-#  "sourceline": "1",
-#  "parameters": {<parameter>: <value>,
-#                 <parameter>: <value>,
-#                 ...}}
-# mock = {}
-# mock["default_templates"] = {
-#     "command": {
-#         "parameters": {
-#             "command_name": "",
-#             "command_line": "",
-#         },
-#     },
-# }
 
 def mock_get_nagios_data(__):
     return [
@@ -59,7 +39,7 @@ def mock_get_nagios_data(__):
 
 @patch('naginator.get_nagios_data', mock_get_nagios_data)
 def test_get_services_config():
-    assert get_services_config() == """
+    assert get_service_config() == """
 define service {
         check_command                  check_load!10,15,15!20,25,25
         host_name                      aaaa.ofi.lan
@@ -83,5 +63,6 @@ define service {
         service_description            swap
         use                            generic
 }
+
 """
 

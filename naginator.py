@@ -24,48 +24,14 @@ __email__ = "favoretti@gmail.com"
 __status__ = "Testing"
 
 
-class Chainmap(UserDict.DictMixin):
-    """Combine multiple mappings for sequential lookup.
-
-    For example, to emulate Python's normal lookup sequence:
-
-        import __builtin__
-        pylookup = Chainmap(locals(), globals(), vars(__builtin__))
-    """
-
-    def __init__(self, *maps):
-        self._maps = maps
-
-    def __getitem__(self, key):
-        for mapping in self._maps:
-            try:
-                return mapping[key]
-            except KeyError:
-                pass
-        raise KeyError(key)
-
-
-service_template = """
-define service {
-        check_command                  ${check_command}
-        host_name                      ${host_name}
-        max_check_attempts             ${max_check_attempts}
-        normal_check_interval          ${normal_check_interval}
-        notes_url                      ${notes_url}
-        notification_interval          ${notification_interval}
-        retry_check_interval           ${retry_check_interval}
-        service_description            ${service_description}
-        use                            ${use}
+TMPL = """
+{% for element in elements %}define {{ dtype }} {
+    {%- for key, value in element['parameters']|dictsort %}
+        {{ key.ljust(31) }}{{ value }}
+    {%- endfor %}
 }
-"""
 
-hostextinfo_template = """
-define hostextinfo {
-        host_name                      ${host_name}
-        icon_image                     ${icon_image}
-        icon_image_alt                 ${icon_image_alt}
-        statusmap_image                ${statusmap_image}
-}
+{% endfor %}
 """
 
 service_defaults = {'max_check_attempts': 3,
@@ -77,6 +43,8 @@ service_defaults = {'max_check_attempts': 3,
 hostextinfo_defaults = {'icon_image_alt': 'Solaris',
                         'statusmap_image': 'logos/solaris.gd2',
                         'icon_image': 'logos/solaris.png'}
+
+
 
 
 def get_nagios_data(dtype, exported=True, tag=''):
@@ -108,18 +76,11 @@ def get_nagios_data(dtype, exported=True, tag=''):
 
 
 
-TMPL = """
-{% for element in elements %}define {{ dtype }} {
-    {%- for key, value in element['parameters']|dictsort %}
-        {{ key.ljust(31) }}{{ value }}
-    {%- endfor %}
-}
-
-{% endfor %}
-"""
-
-
 def get_generic_config(dtype):
+    """Returns a python object with Nagios objects of type 'dtype'.
+
+    dtype:  type of the Nagios objects to retrieve.
+    """
     elements = [ add_default_parameters(dtype, elem) for elem in get_nagios_data(dtype) ]
     return jinja2.Template(TMPL).render(dtype=dtype, elements=elements)
 
@@ -141,7 +102,11 @@ def add_default_parameters(dtype, element):
         element['parameters']['command_name'] = element['title']
     if dtype == 'hostextinfo':
         element['parameters']['host_name'] = element['certname']
+        # Insert default parameters, if needed.
         element['parameters'] = merge_dicts(element['parameters'], hostextinfo_defaults)
+    if dtype == 'service':
+        # Insert default parameters, if needed.
+        element['parameters'] = merge_dicts(element['parameters'], service_defaults)
 
     return element
 
@@ -161,20 +126,9 @@ def get_command_config():
 def get_hostextinfo_config():
     return get_generic_config('hostextinfo')
 
+def get_service_config():
+    return get_generic_config('service')
 
-
-
-def get_services_config():
-    """ To fetch and parse services configuration.
-
-        Todo: Merge into one method.."""
-    services = get_nagios_data('service')
-    services_config = ''
-    for service in services:
-        s = Template(service_template)
-        param_prefill = Chainmap(service['parameters'], service_defaults)
-        services_config += s.safe_substitute(param_prefill)
-    return services_config
 
 
 def get_config():
@@ -185,7 +139,7 @@ def get_config():
     """
     config = (get_hosts_config() + get_hostextinfo_config()
               + get_contact_config() + get_contactgroup_config()
-              + get_services_config() + get_command_config())
+              + get_service_config() + get_command_config())
     return config
 
 
