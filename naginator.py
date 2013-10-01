@@ -8,6 +8,7 @@ import hashlib
 from string import Template
 from optparse import OptionParser
 import UserDict
+import jinja2
 
 try:
     import requests
@@ -43,6 +44,7 @@ class Chainmap(UserDict.DictMixin):
                 pass
         raise KeyError(key)
 
+
 service_template = """
 define service {
         check_command                  ${check_command}
@@ -61,16 +63,6 @@ command_template = """
 define command {
         command_line                   ${command_line}
         command_name                   ${command_name}
-}
-"""
-
-host_template = """
-define host {
-        address                        ${address}
-        alias                          ${alias}
-        contact_groups                 ${contact_groups}
-        host_name                      ${alias}
-        use                            ${use}
 }
 """
 
@@ -139,16 +131,37 @@ def get_nagios_data(dtype, exported=True, tag=''):
     return ndata
 
 
+
+TMPL = """
+{% for element in elements %}define {{ dtype }} {
+    {%- for key, value in element['parameters']|dictsort %}
+        {{ key.ljust(31) }}{{ value }}
+    {%- endfor %}
+}
+
+{% endfor %}
+"""
+
+def get_generic_config(dtype):
+    elements = [ add_default_parameters(dtype, elem) for elem in get_nagios_data(dtype) ]
+    return jinja2.Template(TMPL).render(dtype=dtype, elements=elements)
+
+def add_default_parameters(dtype, element):
+    if dtype == 'host':
+        element['parameters']['host_name'] = element['parameters']['alias']
+
+    return element
+
+
+
 def get_hosts_config():
     """ To fetch and parse hosts configuration.
+    """
+    return get_generic_config('host')
 
-        Todo: Merge into one method.."""
-    hosts_config = ''
-    hosts = get_nagios_data('host')
-    for host in hosts:
-        s = Template(host_template)
-        hosts_config += s.safe_substitute(host['parameters'])
-    return hosts_config
+
+
+
 
 
 def get_hostextinfo_config():

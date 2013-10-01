@@ -47,5 +47,6 @@ define host {
         host_name                      bbbb.ofi
         use                            generic-host
 }
+
 """
 
