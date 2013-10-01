@@ -1,4 +1,4 @@
-from naginator import get_contactgroups_config
+from naginator import get_contactgroup_config
 from mock import *
 
 def mock_get_nagios_data(__):
@@ -26,7 +26,7 @@ def mock_get_nagios_data(__):
 
 @patch('naginator.get_nagios_data', mock_get_nagios_data)
 def test_get_contactgroups_config():
-    assert get_contactgroups_config() == """
+    assert get_contactgroup_config() == """
 define contactgroup {
         alias                          Administrators
         contactgroup_name              admins
@@ -38,5 +38,6 @@ define contactgroup {
         contactgroup_name              visitors
         members                        carl,danny
 }
+
 """
 

@@ -153,6 +153,8 @@ def add_default_parameters(dtype, element):
         element['parameters']['host_name'] = element['parameters']['alias']
     if dtype == 'contact':
         element['parameters']['contact_name'] = element['title']
+    if dtype == 'contactgroup':
+        element['parameters']['contactgroup_name'] = element['title']
 
     return element
 
@@ -162,6 +164,9 @@ def get_hosts_config():
 
 def get_contact_config():
     return get_generic_config('contact')
+
+def get_contactgroup_config():
+    return get_generic_config('contactgroup')
 
 
 
@@ -182,19 +187,6 @@ def get_hostextinfo_config():
         hostextinfo_config += s.safe_substitute(param_prefill)
     return hostextinfo_config
 
-
-
-def get_contactgroups_config():
-    """ To fetch and parse contactgroups configuration.
-
-        Todo: Merge into one method.."""
-    contactgroups = get_nagios_data('contactgroup')
-    contactgroups_config = ''
-    for contactgroup in contactgroups:
-        s = Template(contactgroup_template)
-        contactgroup['parameters']['contactgroup_name'] = contactgroup['title']
-        contactgroups_config += s.safe_substitute(contactgroup['parameters'])
-    return contactgroups_config
 
 
 def get_services_config():
@@ -230,7 +222,7 @@ def get_config():
         people would..
     """
     config = (get_hosts_config() + get_hostextinfo_config()
-              + get_contact_config() + get_contactgroups_config()
+              + get_contact_config() + get_contactgroup_config()
               + get_services_config() + get_commands_config())
     return config
 
