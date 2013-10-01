@@ -28,15 +28,15 @@ def mock_get_nagios_data(__):
 def test_get_contactgroups_config():
     assert get_contactgroups_config() == """
 define contactgroup {
+        alias                          Administrators
         contactgroup_name              admins
         members                        alfred,bob
-        alias                          Administrators
 }
 
 define contactgroup {
+        alias                          Visitors
         contactgroup_name              visitors
         members                        carl,danny
-        alias                          Visitors
 }
 """
 

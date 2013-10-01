@@ -34,18 +34,18 @@ def test_get_hosts_config():
     assert get_hosts_config() == """
 define host {
         address                        172.20.4.20
+        alias                          aaaa.ofi
         contact_groups                 nobody
         host_name                      aaaa.ofi
         use                            generic-host
-        alias                          aaaa.ofi
 }
 
 define host {
         address                        172.20.4.30
+        alias                          bbbb.ofi
         contact_groups                 nobody
         host_name                      bbbb.ofi
         use                            generic-host
-        alias                          bbbb.ofi
 }
 """
 

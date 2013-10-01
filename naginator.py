@@ -46,57 +46,57 @@ class Chainmap(UserDict.DictMixin):
 service_template = """
 define service {
         check_command                  ${check_command}
+        host_name                      ${host_name}
         max_check_attempts             ${max_check_attempts}
         normal_check_interval          ${normal_check_interval}
-        host_name                      ${host_name}
-        notification_interval          ${notification_interval}
         notes_url                      ${notes_url}
-        use                            ${use}
-        service_description            ${service_description}
+        notification_interval          ${notification_interval}
         retry_check_interval           ${retry_check_interval}
+        service_description            ${service_description}
+        use                            ${use}
 }
 """
 
 command_template = """
 define command {
-        command_name                   ${command_name}
         command_line                   ${command_line}
+        command_name                   ${command_name}
 }
 """
 
 host_template = """
 define host {
         address                        ${address}
+        alias                          ${alias}
         contact_groups                 ${contact_groups}
         host_name                      ${alias}
         use                            ${use}
-        alias                          ${alias}
 }
 """
 
 contact_template = """
 define contact {
-        contact_name                   ${contact_name}
-        use                            ${use}
         alias                          ${alias}
+        contact_name                   ${contact_name}
         email                          ${email}
+        use                            ${use}
 }
 """
 
 contactgroup_template = """
 define contactgroup {
+        alias                          ${alias}
         contactgroup_name              ${contactgroup_name}
         members                        ${members}
-        alias                          ${alias}
 }
 """
 
 hostextinfo_template = """
 define hostextinfo {
         host_name                      ${host_name}
+        icon_image                     ${icon_image}
         icon_image_alt                 ${icon_image_alt}
         statusmap_image                ${statusmap_image}
-        icon_image                     ${icon_image}
 }
 """
 

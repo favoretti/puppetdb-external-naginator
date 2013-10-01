@@ -29,17 +29,17 @@ def mock_get_nagios_data(__):
 def test_get_contacts_config():
     assert get_contacts_config() == """
 define contact {
-        contact_name                   alfred
-        use                            generic
         alias                          Alfred
+        contact_name                   alfred
         email                          alfred@example.org
+        use                            generic
 }
 
 define contact {
-        contact_name                   bob
-        use                            generic
         alias                          Bob
+        contact_name                   bob
         email                          bob@example.org
+        use                            generic
 }
 """
 
