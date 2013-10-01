@@ -142,22 +142,26 @@ TMPL = """
 {% endfor %}
 """
 
+
 def get_generic_config(dtype):
     elements = [ add_default_parameters(dtype, elem) for elem in get_nagios_data(dtype) ]
     return jinja2.Template(TMPL).render(dtype=dtype, elements=elements)
 
+
 def add_default_parameters(dtype, element):
     if dtype == 'host':
         element['parameters']['host_name'] = element['parameters']['alias']
+    if dtype == 'contact':
+        element['parameters']['contact_name'] = element['title']
 
     return element
 
 
-
 def get_hosts_config():
-    """ To fetch and parse hosts configuration.
-    """
     return get_generic_config('host')
+
+def get_contact_config():
+    return get_generic_config('contact')
 
 
 
@@ -178,18 +182,6 @@ def get_hostextinfo_config():
         hostextinfo_config += s.safe_substitute(param_prefill)
     return hostextinfo_config
 
-
-def get_contacts_config():
-    """ To fetch and parse contacts configuration.
-
-        Todo: Merge into one method.."""
-    contacts = get_nagios_data('contact')
-    contacts_config = ''
-    for contact in contacts:
-        s = Template(contact_template)
-        contact['parameters']['contact_name'] = contact['title']
-        contacts_config += s.safe_substitute(contact['parameters'])
-    return contacts_config
 
 
 def get_contactgroups_config():
@@ -238,7 +230,7 @@ def get_config():
         people would..
     """
     config = (get_hosts_config() + get_hostextinfo_config()
-              + get_contacts_config() + get_contactgroups_config()
+              + get_contact_config() + get_contactgroups_config()
               + get_services_config() + get_commands_config())
     return config
 

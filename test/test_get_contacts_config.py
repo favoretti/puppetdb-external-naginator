@@ -1,4 +1,4 @@
-from naginator import get_contacts_config
+from naginator import get_contact_config
 from mock import *
 
 
@@ -27,7 +27,7 @@ def mock_get_nagios_data(__):
 
 @patch('naginator.get_nagios_data', mock_get_nagios_data)
 def test_get_contacts_config():
-    assert get_contacts_config() == """
+    assert get_contact_config() == """
 define contact {
         alias                          Alfred
         contact_name                   alfred
@@ -41,5 +41,6 @@ define contact {
         email                          bob@example.org
         use                            generic
 }
+
 """
 
