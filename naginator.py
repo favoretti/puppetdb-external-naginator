@@ -81,6 +81,7 @@ def get_config(dtype):
 
     dtype:  type of the Nagios objects to retrieve.
     """
+    elements = [ add_custom_parameters(dtype, elem) for elem in get_nagios_data(dtype) ]
     elements = [ add_default_parameters(dtype, elem) for elem in get_nagios_data(dtype) ]
     return jinja2.Template(TMPL).render(dtype=dtype, elements=elements)
 
@@ -102,14 +103,37 @@ def add_default_parameters(dtype, element):
         element['parameters']['command_name'] = element['title']
     if dtype == 'hostextinfo':
         element['parameters']['host_name'] = element['certname']
-        # Insert default parameters, if needed.
+
+    return element
+
+
+def add_custom_parameters(dtype, element):
+    # Insert default parameters, if needed.
+    if dtype == 'hostextinfo':
         element['parameters'] = merge_dicts(element['parameters'], hostextinfo_defaults)
     if dtype == 'service':
-        # Insert default parameters, if needed.
         element['parameters'] = merge_dicts(element['parameters'], service_defaults)
 
     return element
 
+
+def get_hosts_config():
+    return get_config('host')
+
+def get_contact_config():
+    return get_config('contact')
+
+def get_contactgroup_config():
+    return get_config('contactgroup')
+
+def get_command_config():
+    return get_config('command')
+
+def get_hostextinfo_config():
+    return get_config('hostextinfo')
+
+def get_service_config():
+    return get_config('service')
 
 
 
@@ -119,8 +143,8 @@ def get_all_config():
         Todo: Do this nice and neat as normal python
         people would..
     """
-    return (get_config('hosts') + get_config('hostextinfo') + get_config('contact')
-            + get_config('contactgroup') + get_config(service) + get_config('command'))
+    return (get_config('host') + get_config('hostextinfo') + get_config('contact')
+            + get_config('contactgroup') + get_config('service') + get_config('command'))
 
 
 def write_config(data, config="/etc/nagios3/naginator.cfg"):

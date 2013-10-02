@@ -11,7 +11,6 @@ def mock_get_nagios_data(__):
                 "address": "172.20.4.20",
                 "alias": "aaaa.ofi",
                 "contact_groups": "nobody",
-                "host_name": "aaaa.ofi.lan",
                 "use": "generic-host",
             },
         },
@@ -21,7 +20,6 @@ def mock_get_nagios_data(__):
             "parameters": {
                 "address": "172.20.4.30",
                 "contact_groups": "nobody",
-                "host_name": "bbbb.ofi.lan",
                 "use": "generic-host",
                 "alias": "bbbb.ofi",
             },
