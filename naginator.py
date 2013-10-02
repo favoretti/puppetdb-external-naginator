@@ -8,8 +8,11 @@ import hashlib
 from string import Template
 from optparse import OptionParser
 import UserDict
-import jinja2
-
+try:
+    import jinja2
+except:
+    print "Please install python-jinja2."
+    sys.exit(1)
 try:
     import requests
 except:
