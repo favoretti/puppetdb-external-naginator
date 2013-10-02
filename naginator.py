@@ -120,25 +120,6 @@ def add_custom_parameters(dtype, element):
     return element
 
 
-def get_hosts_config():
-    return get_config('host')
-
-def get_contact_config():
-    return get_config('contact')
-
-def get_contactgroup_config():
-    return get_config('contactgroup')
-
-def get_command_config():
-    return get_config('command')
-
-def get_hostextinfo_config():
-    return get_config('hostextinfo')
-
-def get_service_config():
-    return get_config('service')
-
-
 
 def get_all_config():
     """ This simply concatenates all data into one.
