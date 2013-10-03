@@ -72,29 +72,7 @@ def get_config(dtype):
 
     dtype:  type of the Nagios objects to retrieve.
     """
-    elements = [ add_default_parameters(dtype, elem) for elem in get_nagios_data(dtype) ]
-    return jinja2.Template(TMPL).render(dtype=dtype, elements=elements)
-
-
-def merge_dicts(values, defaults):
-    """Given two dicts, use items in 'defaults' as default values for 'values'.
-    """
-    return dict( defaults.items() + values.items() )
-
-
-def add_default_parameters(dtype, element):
-    if dtype == 'host':
-        element['parameters']['host_name'] = element['parameters']['alias']
-    if dtype == 'contact':
-        element['parameters']['contact_name'] = element['title']
-    if dtype == 'contactgroup':
-        element['parameters']['contactgroup_name'] = element['title']
-    if dtype == 'command':
-        element['parameters']['command_name'] = element['title']
-    if dtype == 'hostextinfo':
-        element['parameters']['host_name'] = element['certname']
-
-    return element
+    return jinja2.Template(TMPL).render(dtype=dtype, elements=get_nagios_data(dtype))
 
 
 

@@ -6,11 +6,12 @@ def mock_get_nagios_data(__):
     return [
         {
             "certname": "aaaa.ofi.lan" ,
-            "title": "alfred" ,
+            "title": "alice",
             "parameters": {
                 "use": "generic",
-                "alias": "Alfred",
-                "email": "alfred@example.org",
+                "alias": "Alice",
+                "email": "alice@example.org",
+                "contact_name": "alice",
             },
         },
         {
@@ -20,6 +21,7 @@ def mock_get_nagios_data(__):
                 "use": "generic",
                 "alias": "Bob",
                 "email": "bob@example.org",
+                "contact_name": "bob",
             },
         },
     ]
@@ -29,9 +31,9 @@ def mock_get_nagios_data(__):
 def test_get_contacts_config():
     assert get_config('contact') == """
 define contact {
-        alias                          Alfred
-        contact_name                   alfred
-        email                          alfred@example.org
+        alias                          Alice
+        contact_name                   alice
+        email                          alice@example.org
         use                            generic
 }
 

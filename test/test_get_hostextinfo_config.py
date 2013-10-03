@@ -7,6 +7,7 @@ def mock_get_nagios_data(__):
             "certname": "aaaa.ofi.lan" ,
             "title": "aaaa.ofi.lan" ,
             "parameters": {
+                "host_name": "aaaa.ofi.lan",
                 "icon_image_alt": "alt text for aaaa",
                 "statusmap_image": "some statusmap for aaaa",
                 "icon_image": "some icon for aaaa",
@@ -16,6 +17,7 @@ def mock_get_nagios_data(__):
             "certname": "bbbb.ofi.lan" ,
             "title": "bbbb.ofi.lan" ,
             "parameters": {
+                "host_name": "bbbb.ofi.lan",
                 "icon_image_alt": "alt text for bbbb",
                 "statusmap_image": "some statusmap for bbbb",
                 "icon_image": "some icon for bbbb",

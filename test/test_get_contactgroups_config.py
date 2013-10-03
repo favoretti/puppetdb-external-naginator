@@ -8,7 +8,7 @@ def mock_get_nagios_data(__):
             "title": "admins" ,
             "parameters": {
                 "contactgroup_name": "admins",
-                "members": "alfred,bob",
+                "members": "alice,bob",
                 "alias": "Administrators",
             },
         },
@@ -17,7 +17,7 @@ def mock_get_nagios_data(__):
             "title": "visitors" ,
             "parameters": {
                 "contactgroup_name": "visitors",
-                "members": "carl,danny",
+                "members": "charlie,dan",
                 "alias": "Visitors",
             },
         },
@@ -30,13 +30,13 @@ def test_get_contactgroups_config():
 define contactgroup {
         alias                          Administrators
         contactgroup_name              admins
-        members                        alfred,bob
+        members                        alice,bob
 }
 
 define contactgroup {
         alias                          Visitors
         contactgroup_name              visitors
-        members                        carl,danny
+        members                        charlie,dan
 }
 
 """
