@@ -37,18 +37,6 @@ TMPL = """
 {% endfor %}
 """
 
-service_defaults = {'max_check_attempts': 3,
-                    'normal_check_interval': 5,
-                    'notification_interval': 5,
-                    'notes_url': 'http://ecgwiki.corp.ebay.com',
-                    'retry_check_interval': 5}
-
-hostextinfo_defaults = {'icon_image_alt': 'Solaris',
-                        'statusmap_image': 'logos/solaris.gd2',
-                        'icon_image': 'logos/solaris.png'}
-
-
-
 
 def get_nagios_data(dtype, exported=True, tag=''):
     """ Function for fetching data from PuppetDB """
@@ -84,7 +72,6 @@ def get_config(dtype):
 
     dtype:  type of the Nagios objects to retrieve.
     """
-    elements = [ add_custom_parameters(dtype, elem) for elem in get_nagios_data(dtype) ]
     elements = [ add_default_parameters(dtype, elem) for elem in get_nagios_data(dtype) ]
     return jinja2.Template(TMPL).render(dtype=dtype, elements=elements)
 
@@ -106,16 +93,6 @@ def add_default_parameters(dtype, element):
         element['parameters']['command_name'] = element['title']
     if dtype == 'hostextinfo':
         element['parameters']['host_name'] = element['certname']
-
-    return element
-
-
-def add_custom_parameters(dtype, element):
-    # Insert default parameters, if needed.
-    if dtype == 'hostextinfo':
-        element['parameters'] = merge_dicts(element['parameters'], hostextinfo_defaults)
-    if dtype == 'service':
-        element['parameters'] = merge_dicts(element['parameters'], service_defaults)
 
     return element
 
