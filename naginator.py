@@ -27,7 +27,6 @@ __email__ = "favoretti@gmail.com"
 __status__ = "Testing"
 
 
-
 # Some additional logic is required on the template to:
 #  * Ignore Puppet parameters.
 #  * Show as strings values that could be strings or could be lists.
@@ -154,6 +153,11 @@ if __name__ == "__main__":
     command contact contactgroup host hostdependency hostescalation hostextinfo hostgroup service servicedependency serviceescalation serviceextinfo servicegroup timeperiod""")
     parser.add_option("--reload", action="store_true", default=False,
                       help="Reload after config write.")
+    parser.add_option("-b", "--bin", help="Location of monitoring binary",
+                  action="store", type="string", dest="optbin")
+    parser.add_option("-c", "--conf", help="Location of monitoring config",
+                  action="store", type="string", dest="conf")
+
     (options, args) = parser.parse_args()
 
     if options.hostname:
@@ -170,4 +174,4 @@ if __name__ == "__main__":
     else:
         write_config(get_all_config())
         if options.reload:
-            reload_monitoring()
+            reload_monitoring(optbin, conf)
