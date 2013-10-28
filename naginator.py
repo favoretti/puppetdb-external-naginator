@@ -80,14 +80,13 @@ def get_nagios_data(dtype, exported=True, tag=''):
     return ndata
 
 
-
 def get_config(dtype):
     """Returns a python object with Nagios objects of type 'dtype'.
 
     dtype:  type of the Nagios objects to retrieve.
     """
-    return jinja2.Template(TMPL).render(dtype=dtype, elements=get_nagios_data(dtype))
-
+    return jinja2.Template(TMPL).render(dtype=dtype,
+                                        elements=get_nagios_data(dtype))
 
 
 def get_all_config():
@@ -110,17 +109,17 @@ def write_config(data, config="/etc/nagios3/naginator.cfg"):
             os.rename(config, config + '.bak')
             with open(config, 'w') as f:
                 f.write(data)
-            reload_nagios()
     else:
         with open(config, 'w') as f:
             f.write(data)
-        reload_nagios()
 
 
-def reload_nagios():
+def reload_monitoring(service_bin="/usr/src/nagios3",
+                      service_config="/etc/nagios3/nagios.cfg"):
     """ Reload nagios if nagios config is sane. """
-    sanity = subprocess.Popen(["/usr/sbin/nagios3", "-v",
-                               "/etc/nagios3/nagios.cfg"],
+
+    sanity = subprocess.Popen([service_bin, "-v",
+                               service_config],
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
     output, err = sanity.communicate()
@@ -153,6 +152,8 @@ if __name__ == "__main__":
     parser.add_option("-r", "--resource", dest="resource",
             help="""Generate configuration for this Nagios resource. Options:
     command contact contactgroup host hostdependency hostescalation hostextinfo hostgroup service servicedependency serviceescalation serviceextinfo servicegroup timeperiod""")
+    parser.add_option("--reload", action="store_true", default=False,
+                      help="Reload after config write.")
     (options, args) = parser.parse_args()
 
     if options.hostname:
@@ -168,3 +169,5 @@ if __name__ == "__main__":
             print get_all_config()
     else:
         write_config(get_all_config())
+        if options.reload:
+            reload_monitoring()
