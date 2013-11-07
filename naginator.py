@@ -27,14 +27,21 @@ __email__ = "favoretti@gmail.com"
 __status__ = "Testing"
 
 
-TMPL = """
-{% for element in elements %}define {{ dtype }} {
-    {%- for key, value in element['parameters']|dictsort %}
-        {{ key.ljust(31) }}{{ value }}
-    {%- endfor %}
-}
 
+# Some additional logic is required on the template to:
+#  * Ignore Puppet parameters.
+#  * Show as strings values that could be strings or could be lists.
+TMPL = """{% set bad_params = ['notify', 'target', 'ensure', 'require', 'before', 'tag'] -%}
+{% for element in elements %}
+define {{ dtype }} {
+{% for key, value in element['parameters']|dictsort -%}
+  {%- if key not in bad_params -%}
+    {{ key.ljust(31)|indent(8,true) }}{{ value|join("") }}{{ "\n" }}
+  {%- endif -%}
+{% endfor -%}
+}
 {% endfor %}
+
 """
 
 
