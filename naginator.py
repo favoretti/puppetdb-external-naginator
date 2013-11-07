@@ -143,7 +143,9 @@ if __name__ == "__main__":
                       help="Hostname or IP of PuppetDB host.")
     parser.add_option("--stdout", action="store_true", default=False,
                       help="Output configuration to stdout.")
-
+    parser.add_option("-r", "--resource", dest="resource",
+            help="""Generate configuration for this Nagios resource. Options:
+    command contact contactgroup host hostdependency hostescalation hostextinfo hostgroup service servicedependency serviceescalation serviceextinfo servicegroup timeperiod""")
     (options, args) = parser.parse_args()
 
     if options.hostname:
@@ -153,6 +155,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if options.stdout:
-        print get_all_config()
+        if options.resource:
+            print get_config(options.resource)
+        else:
+            print get_all_config()
     else:
         write_config(get_all_config())
