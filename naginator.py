@@ -50,22 +50,29 @@ def get_nagios_data(dtype, exported=True, tag=''):
     headers = {'Accept': 'application/json'}
     if exported:
         if tag:
-            query = """["and", ["=", "exported",  true],
+            query = """["and",
+                ["=", "exported",  true],
+                [ "not", ["=", ["parameter", "ensure"], "absent"]],
                 ["=", "type", "Nagios_{dtype}"],
                 ["=", "tag", "{tag}"],
-                ["=", ["node", "active"],
-                true]]""".format(dtype=dtype, tag=tag)
+                ["=", ["node", "active"], true]]""".format(dtype=dtype, tag=tag)
         else:
-            query = """["and", ["=", "exported",  true],
+            query = """["and",
+                ["=", "exported",  true],
+                [ "not", ["=", ["parameter", "ensure"], "absent"]],
                 ["=", "type", "Nagios_{dtype}"],
                 ["=", ["node", "active"], true]]""".format(dtype=dtype)
     else:
         if tag:
-            query = """["and", ["=", "type", "Nagios_{dtype}"],
-                ["=", "tag", "{tag}"], ["=",
-                ["node", "active"], true]]""".format(dtype=dtype, tag=tag)
+            query = """["and",
+                [ "not", ["=", ["parameter", "ensure"], "absent"]],
+                ["=", "type", "Nagios_{dtype}"],
+                ["=", "tag", "{tag}"],
+                ["=", ["node", "active"], true]]""".format(dtype=dtype, tag=tag)
         else:
-            query = """["=", "type", "Nagios_{dtype}"],
+            query = """["and",
+                [ "not", ["=", ["parameter", "ensure"], "absent"]],
+                ["=", "type", "Nagios_{dtype}"],
                 ["=", ["node", "active"], true]]""".format(dtype=dtype)
     payload = {'query': query}
     r = requests.get(url, params=payload, headers=headers)
