@@ -114,6 +114,7 @@ def write_config(data, config="/etc/nagios3/naginator.cfg"):
 
 
 def reload_monitoring(service_bin="/usr/src/nagios3",
+                      service_initd="/etc/init.d/nagios3",
                       service_config="/etc/nagios3/nagios.cfg"):
     """ Reload nagios if nagios config is sane. """
 
@@ -129,7 +130,7 @@ def reload_monitoring(service_bin="/usr/src/nagios3",
         print output
         sys.exit(1)
     else:
-        do_reload = subprocess.Popen(["/etc/init.d/nagios3",
+        do_reload = subprocess.Popen([service_initd,
                                       "reload"], stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE)
         output, err = do_reload.communicate()
@@ -155,8 +156,12 @@ if __name__ == "__main__":
                       help="Reload after config write.")
     parser.add_option("-b", "--bin", help="Location of monitoring binary",
                   action="store", type="string", dest="optbin")
+    parser.add_option("-d", "--bininitd", help="Location of monitoring init.d",
+                  action="store", type="string", dest="optinitd")
     parser.add_option("-c", "--conf", help="Location of monitoring config",
                   action="store", type="string", dest="conf")
+    parser.add_option("-w", "--write", help="Location of config to write to",
+                  action="store", type="string", dest="confwrite")
 
     (options, args) = parser.parse_args()
 
@@ -172,6 +177,6 @@ if __name__ == "__main__":
         else:
             print get_all_config()
     else:
-        write_config(get_all_config())
+        write_config(get_all_config(), options.confwrite)
         if options.reload:
-            reload_monitoring(optbin, conf)
+            reload_monitoring(options.optbin, options.optinitd, options.conf)
