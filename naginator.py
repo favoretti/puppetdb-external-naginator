@@ -40,7 +40,6 @@ define {{ dtype }} {
 {% endfor -%}
 }
 {% endfor %}
-
 """
 
 
@@ -94,8 +93,11 @@ def get_all_config():
         Todo: Do this nice and neat as normal python
         people would..
     """
-    return (get_config('host') + get_config('hostextinfo') + get_config('contact')
-            + get_config('contactgroup') + get_config('service') + get_config('command'))
+    return (get_config('command') + get_config('contact') + get_config('contactgroup')
+            + get_config('host') + get_config('hostdependency') + get_config('hostescalation')
+            + get_config('hostextinfo') + get_config('hostgroup') + get_config('service')
+            + get_config('servicedependency') + get_config('serviceescalation')
+            + get_config('serviceextinfo') + get_config('servicegroup') + get_config('timeperiod'))
 
 
 def write_config(data, config="/etc/nagios3/naginator.cfg"):
