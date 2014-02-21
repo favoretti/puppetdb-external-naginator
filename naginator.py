@@ -5,9 +5,7 @@ import os
 import subprocess
 import json
 import hashlib
-from string import Template
 from optparse import OptionParser
-import UserDict
 try:
     import jinja2
 except:
@@ -53,7 +51,8 @@ def get_nagios_data(dtype, exported=True, tag=''):
                 [ "not", ["=", ["parameter", "ensure"], "absent"]],
                 ["=", "type", "Nagios_{dtype}"],
                 ["=", "tag", "{tag}"],
-                ["=", ["node", "active"], true]]""".format(dtype=dtype, tag=tag)
+                ["=", ["node", "active"], true]]""".format(dtype=dtype,
+                                                           tag=tag)
         else:
             query = """["and",
                 ["=", "exported",  true],
@@ -66,7 +65,8 @@ def get_nagios_data(dtype, exported=True, tag=''):
                 [ "not", ["=", ["parameter", "ensure"], "absent"]],
                 ["=", "type", "Nagios_{dtype}"],
                 ["=", "tag", "{tag}"],
-                ["=", ["node", "active"], true]]""".format(dtype=dtype, tag=tag)
+                ["=", ["node", "active"], true]]""".format(dtype=dtype,
+                                                           tag=tag)
         else:
             query = """["and",
                 [ "not", ["=", ["parameter", "ensure"], "absent"]],
@@ -93,11 +93,20 @@ def get_all_config():
         Todo: Do this nice and neat as normal python
         people would..
     """
-    return (get_config('command') + get_config('contact') + get_config('contactgroup')
-            + get_config('host') + get_config('hostdependency') + get_config('hostescalation')
-            + get_config('hostextinfo') + get_config('hostgroup') + get_config('service')
-            + get_config('servicedependency') + get_config('serviceescalation')
-            + get_config('serviceextinfo') + get_config('servicegroup') + get_config('timeperiod'))
+    return (get_config('command')
+            + get_config('contact')
+            + get_config('contactgroup')
+            + get_config('host')
+            + get_config('hostdependency')
+            + get_config('hostescalation')
+            + get_config('hostextinfo')
+            + get_config('hostgroup')
+            + get_config('service')
+            + get_config('servicedependency')
+            + get_config('serviceescalation')
+            + get_config('serviceextinfo')
+            + get_config('servicegroup')
+            + get_config('timeperiod'))
 
 
 def write_config(data, config="/etc/nagios3/naginator.cfg"):
@@ -152,18 +161,21 @@ if __name__ == "__main__":
     parser.add_option("--stdout", action="store_true", default=False,
                       help="Output configuration to stdout.")
     parser.add_option("-r", "--resource", dest="resource",
-            help="""Generate configuration for this Nagios resource. Options:
-    command contact contactgroup host hostdependency hostescalation hostextinfo hostgroup service servicedependency serviceescalation serviceextinfo servicegroup timeperiod""")
+                      help="""Generate configuration for this Nagios resource.
+    Options:
+    command contact contactgroup host hostdependency hostescalation hostextinfo
+    hostgroup service servicedependency serviceescalation serviceextinfo
+    servicegroup timeperiod""")
     parser.add_option("--reload", action="store_true", default=False,
                       help="Reload after config write.")
     parser.add_option("-b", "--bin", help="Location of monitoring binary",
-                  action="store", type="string", dest="optbin")
+                      action="store", type="string", dest="optbin")
     parser.add_option("-d", "--bininitd", help="Location of monitoring init.d",
-                  action="store", type="string", dest="optinitd")
+                      action="store", type="string", dest="optinitd")
     parser.add_option("-c", "--conf", help="Location of monitoring config",
-                  action="store", type="string", dest="conf")
+                      action="store", type="string", dest="conf")
     parser.add_option("-w", "--write", help="Location of config to write to",
-                  action="store", type="string", dest="confwrite")
+                      action="store", type="string", dest="confwrite")
 
     (options, args) = parser.parse_args()
 
