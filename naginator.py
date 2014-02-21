@@ -31,10 +31,10 @@ __status__ = "Testing"
 TMPL = """{% set bad_params = ['notify', 'target', 'ensure', 'require', 'before', 'tag'] -%}
 {% for element in elements %}
 define {{ dtype }} {
+{%- if title_var -%}
+  {{ title_var.ljust(31)|indent(8,true) }}{{ element['title'] }}{{ "\n" }}
+{%- endif -%}
 {% for key, value in element['parameters']|dictsort -%}
-  {%- if title_var -%}
-   {{ title_var }}{{ element['title'] }}{{ "\n" }}
-  {%- endif -%}
   {%- if key not in bad_params -%}
     {{ key.ljust(31)|indent(8,true) }}{{ value|join("") }}{{ "\n" }}
   {%- endif -%}
