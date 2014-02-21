@@ -81,7 +81,7 @@ def get_nagios_data(dtype, exported=True, tag=''):
     return ndata
 
 
-def get_config(dtype, title_var):
+def get_config(dtype, title_var=None):
     """Returns a python object with Nagios objects of type 'dtype'.
 
     dtype:  type of the Nagios objects to retrieve.
