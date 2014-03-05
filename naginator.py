@@ -5,9 +5,7 @@ import os
 import subprocess
 import json
 import hashlib
-from string import Template
 from optparse import OptionParser
-import UserDict
 try:
     import jinja2
 except:
@@ -27,21 +25,22 @@ __email__ = "favoretti@gmail.com"
 __status__ = "Testing"
 
 
-
 # Some additional logic is required on the template to:
 #  * Ignore Puppet parameters.
 #  * Show as strings values that could be strings or could be lists.
 TMPL = """{% set bad_params = ['notify', 'target', 'ensure', 'require', 'before', 'tag'] -%}
 {% for element in elements %}
 define {{ dtype }} {
-{% for key, value in element['parameters']|dictsort -%}
+{% if title_var -%}
+  {{ title_var.ljust(31)|indent(8,true) }}{{ element['title'] }}{{ "\n" }}
+{%- endif -%}
+{%- for key, value in element['parameters']|dictsort -%}
   {%- if key not in bad_params -%}
     {{ key.ljust(31)|indent(8,true) }}{{ value|join("") }}{{ "\n" }}
   {%- endif -%}
 {% endfor -%}
 }
 {% endfor %}
-
 """
 
 
@@ -55,7 +54,8 @@ def get_nagios_data(dtype, exported=True, tag=''):
                 [ "not", ["=", ["parameter", "ensure"], "absent"]],
                 ["=", "type", "Nagios_{dtype}"],
                 ["=", "tag", "{tag}"],
-                ["=", ["node", "active"], true]]""".format(dtype=dtype, tag=tag)
+                ["=", ["node", "active"], true]]""".format(dtype=dtype,
+                                                           tag=tag)
         else:
             query = """["and",
                 ["=", "exported",  true],
@@ -68,7 +68,8 @@ def get_nagios_data(dtype, exported=True, tag=''):
                 [ "not", ["=", ["parameter", "ensure"], "absent"]],
                 ["=", "type", "Nagios_{dtype}"],
                 ["=", "tag", "{tag}"],
-                ["=", ["node", "active"], true]]""".format(dtype=dtype, tag=tag)
+                ["=", ["node", "active"], true]]""".format(dtype=dtype,
+                                                           tag=tag)
         else:
             query = """["and",
                 [ "not", ["=", ["parameter", "ensure"], "absent"]],
@@ -80,14 +81,14 @@ def get_nagios_data(dtype, exported=True, tag=''):
     return ndata
 
 
-
-def get_config(dtype):
+def get_config(dtype, title_var=None):
     """Returns a python object with Nagios objects of type 'dtype'.
 
     dtype:  type of the Nagios objects to retrieve.
     """
-    return jinja2.Template(TMPL).render(dtype=dtype, elements=get_nagios_data(dtype))
-
+    return jinja2.Template(TMPL).render(dtype=dtype,
+                                        elements=get_nagios_data(dtype),
+                                        title_var=title_var)
 
 
 def get_all_config():
@@ -96,8 +97,20 @@ def get_all_config():
         Todo: Do this nice and neat as normal python
         people would..
     """
-    return (get_config('host') + get_config('hostextinfo') + get_config('contact')
-            + get_config('contactgroup') + get_config('service') + get_config('command'))
+    return (get_config('command', 'command_name')
+            + get_config('contact', 'contact_name')
+            + get_config('contactgroup', 'contactgroup_name')
+            + get_config('host', 'host_name')
+            + get_config('hostdependency')
+            + get_config('hostescalation')
+            + get_config('hostextinfo', 'host_name')
+            + get_config('hostgroup', 'hostgroup_name')
+            + get_config('service')
+            + get_config('servicedependency')
+            + get_config('serviceescalation')
+            + get_config('serviceextinfo')
+            + get_config('servicegroup', 'servicegroup_name')
+            + get_config('timeperiod', 'timeperiod_name'))
 
 
 def write_config(data, config="/etc/nagios3/naginator.cfg"):
@@ -110,17 +123,18 @@ def write_config(data, config="/etc/nagios3/naginator.cfg"):
             os.rename(config, config + '.bak')
             with open(config, 'w') as f:
                 f.write(data)
-            reload_nagios()
     else:
         with open(config, 'w') as f:
             f.write(data)
-        reload_nagios()
 
 
-def reload_nagios():
+def reload_monitoring(service_bin="/usr/src/nagios3",
+                      service_initd="/etc/init.d/nagios3",
+                      service_config="/etc/nagios3/nagios.cfg"):
     """ Reload nagios if nagios config is sane. """
-    sanity = subprocess.Popen(["/usr/sbin/nagios3", "-v",
-                               "/etc/nagios3/nagios.cfg"],
+
+    sanity = subprocess.Popen([service_bin, "-v",
+                               service_config],
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
     output, err = sanity.communicate()
@@ -131,7 +145,7 @@ def reload_nagios():
         print output
         sys.exit(1)
     else:
-        do_reload = subprocess.Popen(["/etc/init.d/nagios3",
+        do_reload = subprocess.Popen([service_initd,
                                       "reload"], stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE)
         output, err = do_reload.communicate()
@@ -151,8 +165,22 @@ if __name__ == "__main__":
     parser.add_option("--stdout", action="store_true", default=False,
                       help="Output configuration to stdout.")
     parser.add_option("-r", "--resource", dest="resource",
-            help="""Generate configuration for this Nagios resource. Options:
-    command contact contactgroup host hostdependency hostescalation hostextinfo hostgroup service servicedependency serviceescalation serviceextinfo servicegroup timeperiod""")
+                      help="""Generate configuration for this Nagios resource.
+    Options:
+    command contact contactgroup host hostdependency hostescalation hostextinfo
+    hostgroup service servicedependency serviceescalation serviceextinfo
+    servicegroup timeperiod""")
+    parser.add_option("--reload", action="store_true", default=False,
+                      help="Reload after config write.")
+    parser.add_option("-b", "--bin", help="Location of monitoring binary",
+                      action="store", type="string", dest="optbin")
+    parser.add_option("-d", "--bininitd", help="Location of monitoring init.d",
+                      action="store", type="string", dest="optinitd")
+    parser.add_option("-c", "--conf", help="Location of monitoring config",
+                      action="store", type="string", dest="conf")
+    parser.add_option("-w", "--write", help="Location of config to write to",
+                      action="store", type="string", dest="confwrite")
+
     (options, args) = parser.parse_args()
 
     if options.hostname:
@@ -167,4 +195,6 @@ if __name__ == "__main__":
         else:
             print get_all_config()
     else:
-        write_config(get_all_config())
+        write_config(get_all_config(), options.confwrite)
+        if options.reload:
+            reload_monitoring(options.optbin, options.optinitd, options.conf)
