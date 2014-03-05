@@ -184,7 +184,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     if options.hostname:
-        url = "http://" + options.hostname + ":8080/resources"
+        url = "http://" + options.hostname + ":8080/v3/resources"
     else:
         print "Please provide a hostname."
         sys.exit(1)
