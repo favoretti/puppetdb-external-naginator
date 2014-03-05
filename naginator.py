@@ -81,14 +81,24 @@ def get_nagios_data(dtype, exported=True, tag=''):
     return ndata
 
 
-def get_config(dtype, title_var=None):
+def get_config(dtype):
     """Returns a python object with Nagios objects of type 'dtype'.
 
     dtype:  type of the Nagios objects to retrieve.
     """
+    titles = {
+        'command': 'command_name',
+        'contact': 'contact_name',
+        'contactgroup': 'contactgroup_name',
+        'host': 'host_name',
+        'hostextinfo': 'host_name',
+        'hostgroup': 'hostgroup_name',
+        'servicegroup': 'servicegroup_name',
+        'timeperiod': 'timeperiod_name',
+    }
     return jinja2.Template(TMPL).render(dtype=dtype,
                                         elements=get_nagios_data(dtype),
-                                        title_var=title_var)
+                                        title_var=titles.get(dtype))
 
 
 def get_all_config():
@@ -97,20 +107,21 @@ def get_all_config():
         Todo: Do this nice and neat as normal python
         people would..
     """
-    return (get_config('command', 'command_name')
-            + get_config('contact', 'contact_name')
-            + get_config('contactgroup', 'contactgroup_name')
-            + get_config('host', 'host_name')
+    return (get_config('command')
+            + get_config('contact')
+            + get_config('contactgroup')
+            + get_config('host')
             + get_config('hostdependency')
             + get_config('hostescalation')
-            + get_config('hostextinfo', 'host_name')
-            + get_config('hostgroup', 'hostgroup_name')
+            + get_config('hostextinfo')
+            + get_config('hostgroup')
             + get_config('service')
             + get_config('servicedependency')
             + get_config('serviceescalation')
             + get_config('serviceextinfo')
-            + get_config('servicegroup', 'servicegroup_name')
-            + get_config('timeperiod', 'timeperiod_name'))
+            + get_config('servicegroup')
+            + get_config('timeperiod')
+    )
 
 
 def write_config(data, config="/etc/nagios3/naginator.cfg"):
