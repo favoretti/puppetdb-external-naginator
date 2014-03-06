@@ -25,10 +25,11 @@ __email__ = "favoretti@gmail.com"
 __status__ = "Testing"
 
 
-# Some additional logic is required on the template to:
-#  * Ignore Puppet parameters.
-#  * Show as strings values that could be strings or could be lists.
-TMPL = """{% set bad_params = ['notify', 'target', 'ensure', 'require', 'before', 'tag'] -%}
+class NagiosConf:
+
+    def __init__(self, url, dtype):
+
+        self.tmpl = """{% set bad_params = ['notify', 'target', 'ensure', 'require', 'before', 'tag'] -%}
 {% for element in elements %}
 define {{ dtype }} {
 {% if title_var -%}
@@ -42,65 +43,67 @@ define {{ dtype }} {
 }
 {% endfor %}
 """
+        self.url = url
+        self.dtype = dtype
 
 
-def get_nagios_data(dtype, exported=True, tag=''):
-    """ Function for fetching data from PuppetDB """
-    if exported:
-        if tag:
-            query = """["and",
-                ["=", "exported",  true],
-                [ "not", ["=", ["parameter", "ensure"], "absent"]],
-                ["=", "type", "Nagios_{dtype}"],
-                ["=", "tag", "{tag}"],
-                ["=", ["node", "active"], true]]""".format(dtype=dtype,
-                                                           tag=tag)
+    def get_nagios_data(self, exported=True, tag=''):
+        """ Function for fetching data from PuppetDB """
+        if exported:
+            if tag:
+                query = """["and",
+                    ["=", "exported",  true],
+                    [ "not", ["=", ["parameter", "ensure"], "absent"]],
+                    ["=", "type", "Nagios_{dtype}"],
+                    ["=", "tag", "{tag}"],
+                    ["=", ["node", "active"], true]]""".format(dtype=self.dtype,
+                                                               tag=tag)
+            else:
+                query = """["and",
+                    ["=", "exported",  true],
+                    [ "not", ["=", ["parameter", "ensure"], "absent"]],
+                    ["=", "type", "Nagios_{dtype}"],
+                    ["=", ["node", "active"], true]]""".format(dtype=self.dtype)
         else:
-            query = """["and",
-                ["=", "exported",  true],
-                [ "not", ["=", ["parameter", "ensure"], "absent"]],
-                ["=", "type", "Nagios_{dtype}"],
-                ["=", ["node", "active"], true]]""".format(dtype=dtype)
-    else:
-        if tag:
-            query = """["and",
-                [ "not", ["=", ["parameter", "ensure"], "absent"]],
-                ["=", "type", "Nagios_{dtype}"],
-                ["=", "tag", "{tag}"],
-                ["=", ["node", "active"], true]]""".format(dtype=dtype,
-                                                           tag=tag)
-        else:
-            query = """["and",
-                [ "not", ["=", ["parameter", "ensure"], "absent"]],
-                ["=", "type", "Nagios_{dtype}"],
-                ["=", ["node", "active"], true]]""".format(dtype=dtype)
+            if tag:
+                query = """["and",
+                    [ "not", ["=", ["parameter", "ensure"], "absent"]],
+                    ["=", "type", "Nagios_{dtype}"],
+                    ["=", "tag", "{tag}"],
+                    ["=", ["node", "active"], true]]""".format(dtype=self.dtype,
+                                                               tag=tag)
+            else:
+                query = """["and",
+                    [ "not", ["=", ["parameter", "ensure"], "absent"]],
+                    ["=", "type", "Nagios_{dtype}"],
+                    ["=", ["node", "active"], true]]""".format(dtype=self.dtype)
 
-    headers = {'Accept': 'application/json'}
-    # Specify an order for the resources, so we can compare (diff) results from several runs.
-    payload = {'query': query, 'order-by': '[{"field": "title"}]'}
-    r = requests.get(url, params=payload, headers=headers)
-    ndata = json.loads(r.text)
-    return ndata
+        headers = {'Accept': 'application/json'}
+        # Specify an order for the resources, so we can compare (diff) results from several runs.
+        payload = {'query': query, 'order-by': '[{"field": "title"}]'}
+        r = requests.get(self.url, params=payload, headers=headers)
+        ndata = json.loads(r.text)
+        return ndata
 
 
-def get_config(dtype):
-    """Returns a python object with Nagios objects of type 'dtype'.
 
-    dtype:  type of the Nagios objects to retrieve.
-    """
-    titles = {
-        'command': 'command_name',
-        'contact': 'contact_name',
-        'contactgroup': 'contactgroup_name',
-        'host': 'host_name',
-        'hostextinfo': 'host_name',
-        'hostgroup': 'hostgroup_name',
-        'servicegroup': 'servicegroup_name',
-        'timeperiod': 'timeperiod_name',
-    }
-    return jinja2.Template(TMPL).render(dtype=dtype,
-                                        elements=get_nagios_data(dtype),
-                                        title_var=titles.get(dtype))
+    def get(self):
+        """Returns a python object with Nagios objects of type 'dtype'.
+        """
+        titles = {
+            'command': 'command_name',
+            'contact': 'contact_name',
+            'contactgroup': 'contactgroup_name',
+            'host': 'host_name',
+            'hostextinfo': 'host_name',
+            'hostgroup': 'hostgroup_name',
+            'servicegroup': 'servicegroup_name',
+            'timeperiod': 'timeperiod_name',
+        }
+        return jinja2.Template(self.tmpl).render(
+            dtype=self.dtype,
+            elements=self.get_nagios_data(),
+            title_var=titles.get(self.dtype))
 
 
 def write_config(data, config="/etc/nagios3/naginator.cfg"):
@@ -147,7 +150,7 @@ def reload_monitoring(service_bin="/usr/src/nagios3",
             return True
 
 
-if __name__ == "__main__":
+def main():
     usage = '''usage: %prog [options] arg --hostname=host
 
     Resource types:
@@ -192,10 +195,16 @@ if __name__ == "__main__":
         opts.resources = all_resource_types
 
 
-    conf = [get_config(res) for res in opts.resources]
+    conf_objs = [NagiosConf(url, res) for res in opts.resources]
+
+    confs = [c.get() for c in conf_objs]
     if opts.stdout:
-        print ''.join(conf)
+        print ''.join(confs)
     else:
-        write_config(''.join(conf), opts.confwrite)
+        write_config(''.join(confs), opts.confwrite)
         if opts.reload:
             reload_monitoring(opts.optbin, opts.optinitd, opts.conf)
+
+
+if __name__ == "__main__":
+    main()
