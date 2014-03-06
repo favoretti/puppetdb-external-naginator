@@ -76,7 +76,7 @@ def get_nagios_data(dtype, exported=True, tag=''):
                 ["=", ["node", "active"], true]]""".format(dtype=dtype)
 
     headers = {'Accept': 'application/json'}
-    #  Specify an order for the resources, so we can compare (diff) results from several runs.Specify an order for the resources, so we can compare (diff) results from several runs.
+    # Specify an order for the resources, so we can compare (diff) results from several runs.
     payload = {'query': query, 'order-by': '[{"field": "title"}]'}
     r = requests.get(url, params=payload, headers=headers)
     ndata = json.loads(r.text)
@@ -101,29 +101,6 @@ def get_config(dtype):
     return jinja2.Template(TMPL).render(dtype=dtype,
                                         elements=get_nagios_data(dtype),
                                         title_var=titles.get(dtype))
-
-
-def get_all_config():
-    """ This simply concatenates all data into one.
-
-        Todo: Do this nice and neat as normal python
-        people would..
-    """
-    return (get_config('command')
-            + get_config('contact')
-            + get_config('contactgroup')
-            + get_config('host')
-            + get_config('hostdependency')
-            + get_config('hostescalation')
-            + get_config('hostextinfo')
-            + get_config('hostgroup')
-            + get_config('service')
-            + get_config('servicedependency')
-            + get_config('serviceescalation')
-            + get_config('serviceextinfo')
-            + get_config('servicegroup')
-            + get_config('timeperiod')
-    )
 
 
 def write_config(data, config="/etc/nagios3/naginator.cfg"):
@@ -171,18 +148,21 @@ def reload_monitoring(service_bin="/usr/src/nagios3",
 
 
 if __name__ == "__main__":
-    usage = "usage: %prog [options] arg --hostname=host"
+    usage = '''usage: %prog [options] arg --hostname=host
+
+    Resource types:
+
+    command contact contactgroup host hostdependency hostescalation hostextinfo
+    hostgroup service servicedependency serviceescalation serviceextinfo
+    servicegroup timeperiod
+'''
     parser = OptionParser(usage)
     parser.add_option("-i", "--hostname", dest="hostname",
                       help="Hostname or IP of PuppetDB host.")
     parser.add_option("--stdout", action="store_true", default=False,
                       help="Output configuration to stdout.")
-    parser.add_option("-r", "--resource", dest="resource",
-                      help="""Generate configuration for this Nagios resource.
-    Options:
-    command contact contactgroup host hostdependency hostescalation hostextinfo
-    hostgroup service servicedependency serviceescalation serviceextinfo
-    servicegroup timeperiod""")
+    parser.add_option("-r", "--resources", dest="resources",
+            help="""Comma-separated list of Nagios resources [default: all]""")
     parser.add_option("--reload", action="store_true", default=False,
                       help="Reload after config write.")
     parser.add_option("-b", "--bin", help="Location of monitoring binary",
@@ -194,20 +174,28 @@ if __name__ == "__main__":
     parser.add_option("-w", "--write", help="Location of config to write to",
                       action="store", type="string", dest="confwrite")
 
-    (options, args) = parser.parse_args()
+    (opts, args) = parser.parse_args()
 
-    if options.hostname:
-        url = "http://" + options.hostname + ":8080/v3/resources"
+    all_resource_types = ['command', 'contact', 'contactgroup', 'host', 'hostdependency',
+        'hostescalation', 'hostextinfo', 'hostgroup', 'service', 'servicedependency',
+        'serviceescalation', 'serviceextinfo', 'servicegroup', 'timeperiod']
+
+    if opts.hostname:
+        url = "http://" + opts.hostname + ":8080/v3/resources"
     else:
         print "Please provide a hostname."
         sys.exit(1)
 
-    if options.stdout:
-        if options.resource:
-            print get_config(options.resource)
-        else:
-            print get_all_config()
+    if opts.resources:
+        opts.resources = opts.resources.split(',')
     else:
-        write_config(get_all_config(), options.confwrite)
-        if options.reload:
-            reload_monitoring(options.optbin, options.optinitd, options.conf)
+        opts.resources = all_resource_types
+
+
+    conf = [get_config(res) for res in opts.resources]
+    if opts.stdout:
+        print ''.join(conf)
+    else:
+        write_config(''.join(conf), opts.confwrite)
+        if opts.reload:
+            reload_monitoring(opts.optbin, opts.optinitd, opts.conf)
