@@ -46,7 +46,6 @@ define {{ dtype }} {
 
 def get_nagios_data(dtype, exported=True, tag=''):
     """ Function for fetching data from PuppetDB """
-    headers = {'Accept': 'application/json'}
     if exported:
         if tag:
             query = """["and",
@@ -75,7 +74,10 @@ def get_nagios_data(dtype, exported=True, tag=''):
                 [ "not", ["=", ["parameter", "ensure"], "absent"]],
                 ["=", "type", "Nagios_{dtype}"],
                 ["=", ["node", "active"], true]]""".format(dtype=dtype)
-    payload = {'query': query}
+
+    headers = {'Accept': 'application/json'}
+    #  Specify an order for the resources, so we can compare (diff) results from several runs.Specify an order for the resources, so we can compare (diff) results from several runs.
+    payload = {'query': query, 'order-by': '[{"field": "title"}]'}
     r = requests.get(url, params=payload, headers=headers)
     ndata = json.loads(r.text)
     return ndata
