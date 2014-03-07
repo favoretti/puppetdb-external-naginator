@@ -219,11 +219,9 @@ def main():
     if opts.stdout:
         print ''.join(confs)
     else:
-        [c.write() for c in conf_objs]
-    # else:
-    #     write_config(''.join(confs), opts.confwrite)
-    #     if opts.reload:
-    #         reload_monitoring(opts.optbin, opts.optinitd, opts.conf)
+        write_config(''.join(confs), opts.confwrite)
+        if opts.reload:
+            reload_monitoring(opts.optbin, opts.optinitd, opts.conf)
 
 
 if __name__ == "__main__":
