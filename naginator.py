@@ -27,7 +27,7 @@ __status__ = "Testing"
 
 class NagiosConf:
 
-    def __init__(self, url, dtype):
+    def __init__(self, url, dtype, base_dir):
 
         self.tmpl = """{% set bad_params = ['notify', 'target', 'ensure', 'require', 'before', 'tag'] -%}
 {% for element in elements %}
@@ -45,6 +45,8 @@ define {{ dtype }} {
 """
         self.url = url
         self.dtype = dtype
+        self.base_dir = base_dir
+        self.tmp_dir = os.path.join(self.base_dir, 'tmp.d')
 
 
     def get_nagios_data(self, exported=True, tag=''):
@@ -104,6 +106,20 @@ define {{ dtype }} {
             dtype=self.dtype,
             elements=self.get_nagios_data(),
             title_var=titles.get(self.dtype))
+
+
+
+    def write(self):
+        """Write config to a file in tmp.d/. File is named afther the Nagios type.
+        """
+        conf_file = os.path.join(self.tmp_dir, '%s.cfg' % self.dtype)
+        if not os.path.exists(self.tmp_dir):
+            os.mkdir(self.tmp_dir)
+        config = self.get()
+        with open(conf_file, 'w') as f:
+            f.write(config)
+
+
 
 
 def write_config(data, config="/etc/nagios3/naginator.cfg"):
@@ -166,6 +182,8 @@ def main():
                       help="Output configuration to stdout.")
     parser.add_option("-r", "--resources", dest="resources",
             help="""Comma-separated list of Nagios resources [default: all]""")
+    parser.add_option("--base-dir", help="Base configuration directory [default: %default]",
+                      type="string", dest="base_dir", default="/etc/nagios")
     parser.add_option("--reload", action="store_true", default=False,
                       help="Reload after config write.")
     parser.add_option("-b", "--bin", help="Location of monitoring binary",
@@ -195,15 +213,17 @@ def main():
         opts.resources = all_resource_types
 
 
-    conf_objs = [NagiosConf(url, res) for res in opts.resources]
+    conf_objs = [NagiosConf(url, res, opts.base_dir) for res in opts.resources]
 
     confs = [c.get() for c in conf_objs]
     if opts.stdout:
         print ''.join(confs)
     else:
-        write_config(''.join(confs), opts.confwrite)
-        if opts.reload:
-            reload_monitoring(opts.optbin, opts.optinitd, opts.conf)
+        [c.write() for c in conf_objs]
+    # else:
+    #     write_config(''.join(confs), opts.confwrite)
+    #     if opts.reload:
+    #         reload_monitoring(opts.optbin, opts.optinitd, opts.conf)
 
 
 if __name__ == "__main__":
