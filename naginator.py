@@ -214,7 +214,7 @@ class ConfReplacer:
 
 
 def main():
-    usage = '''usage: %prog [options] arg --hostname=host
+    usage = '''Usage: %prog [options] arg
 
     Resource types:
 
@@ -225,8 +225,6 @@ def main():
     parser = OptionParser(usage)
     parser.add_option("-i", "--hostname", dest="hostname",
         help="Hostname or IP of PuppetDB host.")
-    parser.add_option("--stdout", action="store_true", default=False,
-        help="Output configuration to stdout.")
     parser.add_option("-r", "--resources", dest="resources",
         help="""Comma-separated list of Nagios resources [default: all]""")
     parser.add_option("--base-dir", type="string", dest="base_dir", default="/etc/nagios",
@@ -257,15 +255,16 @@ def main():
 
 
     conf_objs = [NagiosConf(url, res, opts.base_dir) for res in opts.resources]
+    replacer = ConfReplacer(opts.base_dir, opts.initd, opts.bin)
 
-    if opts.stdout:
-        confs = [c.get() for c in conf_objs]
-        print ''.join(confs)
-    else:
-        confs = [c.write() for c in conf_objs]
-        if opts.reload:
-            replacer = ConfReplacer(opts.base_dir, opts.initd, opts.bin)
-            replacer.push(noop=False)
+    # Ensure this doesn't exist, so we don't get mixed configurations between different runs.
+    if exists(replacer.tmp_dir):
+        rmtree(replacer.tmp_dir)
+
+    for conf in conf_objs:
+        conf.write()
+    if opts.reload:
+        replacer.push(noop=False)
 
 
 if __name__ == "__main__":
