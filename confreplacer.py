@@ -3,10 +3,12 @@
 # confreplacer.py
 
 import sys
+import os
 from optparse import OptionParser
 import subprocess
-from path import path
 import filecmp
+from os.path import join, exists
+from shutil import rmtree, move
 from exceptions import RuntimeError
 
 
@@ -26,9 +28,9 @@ class ConfReplacer:
         self.initd = initd
         self.bin = nagios_bin
 
-        self.dst_dir = path.joinpath(self.base_dir, 'naginator.d')
-        self.bak_dir = path.joinpath(self.base_dir, 'backup.d')
-        self.tmp_dir = path.joinpath(self.base_dir, 'tmp.d')
+        self.dst_dir = join(self.base_dir, 'naginator.d')
+        self.bak_dir = join(self.base_dir, 'backup.d')
+        self.tmp_dir = join(self.base_dir, 'tmp.d')
 
 
     def generate(self, url, nagios_types):
@@ -36,13 +38,14 @@ class ConfReplacer:
         """
         # Get destination directories ready.
         self._clean()
-        path(self.tmp_dir).mkdir_p(0755)
+        if not exists(self.tmp_dir):
+            os.mkdir(self.tmp_dir, 0775)
 
         # Generate configuration for every Nagios_type.
         results = []
         cmd = '''naginator.py -i %s --stdout -r %s > %s'''
         for obj in nagios_types:
-            r = run(cmd % (url, obj, self.tmp_dir.joinpath('%s.conf' % obj)))
+            r = run(cmd % (url, obj, join(self.tmp_dir, ('%s.conf' % obj))))
             results.append(r)
 
         if any(results):
@@ -68,11 +71,16 @@ class ConfReplacer:
 
 
     def _clean(self):
-        self.tmp_dir.rmtree_p()
-        self.bak_dir.rmtree_p()
+        if exists(self.tmp_dir):
+            rmtree(self.tmp_dir)
+        if exists(self.bak_dir):
+            rmtree(self.bak_dir)
 
 
     def _has_changes(self):
+        if not exists(self.tmp_dir) or not exists(self.dst_dir):
+            return True
+
         diff_dir = filecmp.dircmp(self.tmp_dir, self.dst_dir)
         changes = diff_dir.diff_files + diff_dir.left_only + diff_dir.right_only
         return changes != []
@@ -80,19 +88,25 @@ class ConfReplacer:
 
     def _is_valid(self):
         # [todo] Check there are no empty files.
-        conf_file = path.joinpath(self.base_dir, 'nagios.cfg')
+        conf_file = join(self.base_dir, 'nagios.cfg')
         cmd = '%s -v %s > /dev/null 2>&1' % (self.bin, conf_file)
         return run(cmd) == 0
 
 
     def _replace(self):
-        self.dst_dir.move(self.bak_dir)
-        self.tmp_dir.move(self.dst_dir)
+        if exists(self.bak_dir):
+            rmtree(self.bak_dir)
+
+        move(self.dst_dir, self.bak_dir)
+        move(self.tmp_dir, self.dst_dir)
 
 
     def _rollback(self):
-        self.dst_dir.move(self.tmp_dir)
-        self.bak_dir.move(self.dst_dir)
+        if exists(self.tmp_dir):
+            rmtree(self.tmp_dir)
+        move(self.dst_dir, self.tmp_dir)
+        if exists(self.bak_dir):
+            move(self.bak_dir, self.dst_dir)
         raise RuntimeError('Something is wrong in the generated configuration (look at tmp.d/)')
 
 
