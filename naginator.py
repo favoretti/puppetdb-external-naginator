@@ -6,6 +6,10 @@ import subprocess
 import json
 import hashlib
 from optparse import OptionParser
+import filecmp
+from os.path import join, exists
+from shutil import rmtree, move
+from exceptions import RuntimeError
 try:
     import jinja2
 except:
@@ -23,6 +27,17 @@ __date__ = "12-14-2012"
 __maintainer__ = "SiteOps eBay Classifieds"
 __email__ = "favoretti@gmail.com"
 __status__ = "Testing"
+
+
+
+
+def run(cmd):
+    """Execute 'cmd' in a shell. Return exit status.
+    """
+    return subprocess.call(cmd, shell=True)
+
+
+
 
 
 class NagiosConf:
@@ -122,48 +137,80 @@ define {{ dtype }} {
 
 
 
-def write_config(data, config="/etc/nagios3/naginator.cfg"):
-    """ Write config to file and reload nagios. """
-    if os.path.exists(config) and os.path.isfile(config):
-        with open(config, 'r') as f:
-            local_config = f.read()
-        if (hashlib.md5(data).hexdigest() !=
-           hashlib.md5(local_config).hexdigest()):
-            os.rename(config, config + '.bak')
-            with open(config, 'w') as f:
-                f.write(data)
-    else:
-        with open(config, 'w') as f:
-            f.write(data)
+class ConfReplacer:
+
+    def __init__(self, base_dir, initd, nagios_bin):
+        self.base_dir = base_dir
+        self.initd = initd
+        self.bin = nagios_bin
+
+        self.dst_dir = join(self.base_dir, 'naginator.d')
+        self.bak_dir = join(self.base_dir, 'backup.d')
+        self.tmp_dir = join(self.base_dir, 'tmp.d')
 
 
-def reload_monitoring(service_bin="/usr/src/nagios3",
-                      service_initd="/etc/init.d/nagios3",
-                      service_config="/etc/nagios3/nagios.cfg"):
-    """ Reload nagios if nagios config is sane. """
 
-    sanity = subprocess.Popen([service_bin, "-v",
-                               service_config],
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
-    output, err = sanity.communicate()
-    if sanity.poll() != 0:
-        print """Sanity check of Nagios failed.
-                  Not reloading.
-                  Please fix the errors shown below:\r"""
-        print output
-        sys.exit(1)
-    else:
-        do_reload = subprocess.Popen([service_initd,
-                                      "reload"], stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE)
-        output, err = do_reload.communicate()
-        if do_reload.poll() != 0:
-            print "Reloading Nagios failed, please fix:\r"
-            print output
-            sys.exit(1)
+    def push(self, noop=False):
+        """Replace existing configuration with generated configuration.
+
+        Only acts if there are changes and the new configuration is valid.
+        """
+        if self._has_changes():
+            if not noop:
+                self._replace()
+                if self._is_valid():
+                    self._reload()
+                    self._clean()
+                else:
+                    self._rollback()
         else:
+            self._clean()
+
+
+    def _clean(self):
+        if exists(self.tmp_dir):
+            rmtree(self.tmp_dir)
+        if exists(self.bak_dir):
+            rmtree(self.bak_dir)
+
+
+    def _has_changes(self):
+        if not exists(self.tmp_dir) or not exists(self.dst_dir):
             return True
+
+        diff_dir = filecmp.dircmp(self.tmp_dir, self.dst_dir)
+        changes = diff_dir.diff_files + diff_dir.left_only + diff_dir.right_only
+        return changes != []
+
+
+    def _is_valid(self):
+        # [todo] Check there are no empty files.
+        conf_file = join(self.base_dir, 'nagios.cfg')
+        cmd = '%s -v %s > /dev/null 2>&1' % (self.bin, conf_file)
+        return run(cmd) == 0
+
+
+    def _replace(self):
+        if exists(self.bak_dir):
+            rmtree(self.bak_dir)
+
+        move(self.dst_dir, self.bak_dir)
+        move(self.tmp_dir, self.dst_dir)
+
+
+    def _rollback(self):
+        if exists(self.tmp_dir):
+            rmtree(self.tmp_dir)
+        move(self.dst_dir, self.tmp_dir)
+        if exists(self.bak_dir):
+            move(self.bak_dir, self.dst_dir)
+        raise RuntimeError('Something is wrong in the generated configuration (look at tmp.d/)')
+
+
+    def _reload(self):
+        run('''%s reload > /dev/null 2>&1''' % self.initd)
+
+
 
 
 def main():
@@ -177,23 +224,19 @@ def main():
 '''
     parser = OptionParser(usage)
     parser.add_option("-i", "--hostname", dest="hostname",
-                      help="Hostname or IP of PuppetDB host.")
+        help="Hostname or IP of PuppetDB host.")
     parser.add_option("--stdout", action="store_true", default=False,
-                      help="Output configuration to stdout.")
+        help="Output configuration to stdout.")
     parser.add_option("-r", "--resources", dest="resources",
-            help="""Comma-separated list of Nagios resources [default: all]""")
-    parser.add_option("--base-dir", help="Base configuration directory [default: %default]",
-                      type="string", dest="base_dir", default="/etc/nagios")
+        help="""Comma-separated list of Nagios resources [default: all]""")
+    parser.add_option("--base-dir", type="string", dest="base_dir", default="/etc/nagios",
+        help="Base configuration directory [default: %default]")
+    parser.add_option("-b", "--bin", type="string", dest="bin", default="/usr/bin/nagios",
+        help="Nagios binary [default: %default]")
+    parser.add_option("-d", "--initd", type="string", dest="initd", default='/etc/init.d/nagios',
+        help="Nagios init.d script [default: %default]")
     parser.add_option("--reload", action="store_true", default=False,
-                      help="Reload after config write.")
-    parser.add_option("-b", "--bin", help="Location of monitoring binary",
-                      action="store", type="string", dest="optbin")
-    parser.add_option("-d", "--bininitd", help="Location of monitoring init.d",
-                      action="store", type="string", dest="optinitd")
-    parser.add_option("-c", "--conf", help="Location of monitoring config",
-                      action="store", type="string", dest="conf")
-    parser.add_option("-w", "--write", help="Location of config to write to",
-                      action="store", type="string", dest="confwrite")
+        help="Reload after config write.")
 
     (opts, args) = parser.parse_args()
 
@@ -215,13 +258,14 @@ def main():
 
     conf_objs = [NagiosConf(url, res, opts.base_dir) for res in opts.resources]
 
-    confs = [c.get() for c in conf_objs]
     if opts.stdout:
+        confs = [c.get() for c in conf_objs]
         print ''.join(confs)
     else:
-        write_config(''.join(confs), opts.confwrite)
+        confs = [c.write() for c in conf_objs]
         if opts.reload:
-            reload_monitoring(opts.optbin, opts.optinitd, opts.conf)
+            replacer = ConfReplacer(opts.base_dir, opts.initd, opts.bin)
+            replacer.push(noop=False)
 
 
 if __name__ == "__main__":
