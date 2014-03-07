@@ -42,7 +42,7 @@ def run(cmd):
 
 class NagiosConf:
 
-    def __init__(self, url, dtype, base_dir):
+    def __init__(self, url, dtype, base_dir, tag=''):
 
         self.tmpl = """{% set bad_params = ['notify', 'target', 'ensure', 'require', 'before', 'tag'] -%}
 {% for element in elements %}
@@ -62,19 +62,20 @@ define {{ dtype }} {
         self.dtype = dtype
         self.base_dir = base_dir
         self.tmp_dir = os.path.join(self.base_dir, 'tmp.d')
+        self.tag = tag
 
 
-    def get_nagios_data(self, exported=True, tag=''):
+    def get_nagios_data(self, exported=True):
         """ Function for fetching data from PuppetDB """
         if exported:
-            if tag:
+            if self.tag:
                 query = """["and",
                     ["=", "exported",  true],
                     [ "not", ["=", ["parameter", "ensure"], "absent"]],
                     ["=", "type", "Nagios_{dtype}"],
                     ["=", "tag", "{tag}"],
                     ["=", ["node", "active"], true]]""".format(dtype=self.dtype,
-                                                               tag=tag)
+                                                               tag=self.tag)
             else:
                 query = """["and",
                     ["=", "exported",  true],
@@ -82,13 +83,13 @@ define {{ dtype }} {
                     ["=", "type", "Nagios_{dtype}"],
                     ["=", ["node", "active"], true]]""".format(dtype=self.dtype)
         else:
-            if tag:
+            if self.tag:
                 query = """["and",
                     [ "not", ["=", ["parameter", "ensure"], "absent"]],
                     ["=", "type", "Nagios_{dtype}"],
                     ["=", "tag", "{tag}"],
                     ["=", ["node", "active"], true]]""".format(dtype=self.dtype,
-                                                               tag=tag)
+                                                               tag=self.tag)
             else:
                 query = """["and",
                     [ "not", ["=", ["parameter", "ensure"], "absent"]],
@@ -214,7 +215,7 @@ class ConfReplacer:
 
 
 def main():
-    usage = '''Usage: %prog [options] arg
+    usage = '''Usage: %prog [options]
 
     Resource types:
 
@@ -227,20 +228,18 @@ def main():
         help="Hostname or IP of PuppetDB host.")
     parser.add_option("-r", "--resources", dest="resources",
         help="""Comma-separated list of Nagios resources [default: all]""")
+    parser.add_option("-t", "--tag", dest="tag",
+        help="Only resources with this tag.")
     parser.add_option("--base-dir", type="string", dest="base_dir", default="/etc/nagios",
         help="Base configuration directory [default: %default]")
     parser.add_option("-b", "--bin", type="string", dest="bin", default="/usr/bin/nagios",
         help="Nagios binary [default: %default]")
     parser.add_option("-d", "--initd", type="string", dest="initd", default='/etc/init.d/nagios',
         help="Nagios init.d script [default: %default]")
-    parser.add_option("--reload", action="store_true", default=False,
-        help="Reload after config write.")
+    parser.add_option("--noop", action="store_true", default=False,
+        help="Generate new config on tmp.d/ but don't apply it.")
 
     (opts, args) = parser.parse_args()
-
-    all_resource_types = ['command', 'contact', 'contactgroup', 'host', 'hostdependency',
-        'hostescalation', 'hostextinfo', 'hostgroup', 'service', 'servicedependency',
-        'serviceescalation', 'serviceextinfo', 'servicegroup', 'timeperiod']
 
     if opts.hostname:
         url = "http://" + opts.hostname + ":8080/v3/resources"
@@ -251,10 +250,13 @@ def main():
     if opts.resources:
         opts.resources = opts.resources.split(',')
     else:
-        opts.resources = all_resource_types
+        opts.resources = ['command', 'contact', 'contactgroup', 'host', 'hostdependency',
+        'hostescalation', 'hostextinfo', 'hostgroup', 'service', 'servicedependency',
+        'serviceescalation', 'serviceextinfo', 'servicegroup', 'timeperiod']
 
 
-    conf_objs = [NagiosConf(url, res, opts.base_dir) for res in opts.resources]
+
+    conf_objs = [NagiosConf(url, res, opts.base_dir, tag=opts.tag) for res in opts.resources]
     replacer = ConfReplacer(opts.base_dir, opts.initd, opts.bin)
 
     # Ensure this doesn't exist, so we don't get mixed configurations between different runs.
@@ -263,7 +265,7 @@ def main():
 
     for conf in conf_objs:
         conf.write()
-    if opts.reload:
+    if not opts.noop:
         replacer.push(noop=False)
 
 
