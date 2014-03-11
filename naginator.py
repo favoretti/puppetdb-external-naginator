@@ -4,7 +4,6 @@ import sys
 import os
 import subprocess
 import json
-import hashlib
 from optparse import OptionParser
 import filecmp
 from os.path import join, exists
@@ -29,15 +28,10 @@ __email__ = "favoretti@gmail.com"
 __status__ = "Testing"
 
 
-
-
 def run(cmd):
     """Execute 'cmd' in a shell. Return exit status.
     """
     return subprocess.call(cmd, shell=True)
-
-
-
 
 
 class NagiosConf:
@@ -63,7 +57,6 @@ define {{ dtype }} {
         self.base_dir = base_dir
         self.tmp_dir = os.path.join(self.base_dir, 'tmp.d')
         self.tag = tag
-
 
     def get_nagios_data(self, exported=True):
         """ Function for fetching data from PuppetDB """
@@ -103,8 +96,6 @@ define {{ dtype }} {
         ndata = json.loads(r.text)
         return ndata
 
-
-
     def get(self):
         """Returns a python object with Nagios objects of type 'dtype'.
         """
@@ -123,8 +114,6 @@ define {{ dtype }} {
             elements=self.get_nagios_data(),
             title_var=titles.get(self.dtype))
 
-
-
     def write(self):
         """Write config to a file in tmp.d/. File is named afther the Nagios type.
         """
@@ -134,8 +123,6 @@ define {{ dtype }} {
         config = self.get()
         with open(conf_file, 'w') as f:
             f.write(config)
-
-
 
 
 class ConfReplacer:
@@ -148,8 +135,6 @@ class ConfReplacer:
         self.dst_dir = join(self.base_dir, 'naginator.d')
         self.bak_dir = join(self.base_dir, 'backup.d')
         self.tmp_dir = join(self.base_dir, 'tmp.d')
-
-
 
     def push(self, noop=False):
         """Replace existing configuration with generated configuration.
@@ -167,13 +152,11 @@ class ConfReplacer:
         else:
             self._clean()
 
-
     def _clean(self):
         if exists(self.tmp_dir):
             rmtree(self.tmp_dir)
         if exists(self.bak_dir):
             rmtree(self.bak_dir)
-
 
     def _has_changes(self):
         if not exists(self.tmp_dir) or not exists(self.dst_dir):
@@ -183,13 +166,11 @@ class ConfReplacer:
         changes = diff_dir.diff_files + diff_dir.left_only + diff_dir.right_only
         return changes != []
 
-
     def _is_valid(self):
         # [todo] Check there are no empty files.
         conf_file = join(self.base_dir, 'nagios.cfg')
         cmd = '%s -v %s > /dev/null 2>&1' % (self.bin, conf_file)
         return run(cmd) == 0
-
 
     def _replace(self):
         if exists(self.bak_dir):
@@ -197,7 +178,6 @@ class ConfReplacer:
 
         move(self.dst_dir, self.bak_dir)
         move(self.tmp_dir, self.dst_dir)
-
 
     def _rollback(self):
         if exists(self.tmp_dir):
@@ -207,11 +187,8 @@ class ConfReplacer:
             move(self.bak_dir, self.dst_dir)
         raise RuntimeError('Something is wrong in the generated configuration (look at tmp.d/)')
 
-
     def _reload(self):
         run('''%s reload > /dev/null 2>&1''' % self.initd)
-
-
 
 
 def main():
@@ -227,17 +204,18 @@ def main():
     parser.add_option("-i", "--hostname", dest="hostname",
         help="Hostname or IP of PuppetDB host.")
     parser.add_option("-r", "--resources", dest="resources",
-        help="""Comma-separated list of Nagios resources [default: all]""")
+                      help="""Comma-separated list of Nagios resources
+                              [default: all]""")
     parser.add_option("-t", "--tag", dest="tag",
-        help="Only resources with this tag.")
+                      help="Only resources with this tag.")
     parser.add_option("--base-dir", type="string", dest="base_dir", default="/etc/nagios",
-        help="Base configuration directory [default: %default]")
+                      help="Base configuration directory [default: %default]")
     parser.add_option("-b", "--bin", type="string", dest="bin", default="/usr/bin/nagios",
-        help="Nagios binary [default: %default]")
+                      help="Nagios binary [default: %default]")
     parser.add_option("-d", "--initd", type="string", dest="initd", default='/etc/init.d/nagios',
-        help="Nagios init.d script [default: %default]")
+                      help="Nagios init.d script [default: %default]")
     parser.add_option("--noop", action="store_true", default=False,
-        help="Generate new config on tmp.d/ but don't apply it.")
+                      help="Generate new config on tmp.d/ but don't apply it.")
 
     (opts, args) = parser.parse_args()
 
@@ -250,11 +228,11 @@ def main():
     if opts.resources:
         opts.resources = opts.resources.split(',')
     else:
-        opts.resources = ['command', 'contact', 'contactgroup', 'host', 'hostdependency',
-        'hostescalation', 'hostextinfo', 'hostgroup', 'service', 'servicedependency',
-        'serviceescalation', 'serviceextinfo', 'servicegroup', 'timeperiod']
-
-
+        opts.resources = ['command', 'contact', 'contactgroup', 'host',
+                          'hostdependency', 'hostescalation', 'hostextinfo',
+                          'hostgroup', 'service', 'servicedependency',
+                          'serviceescalation', 'serviceextinfo',
+                          'servicegroup', 'timeperiod']
 
     conf_objs = [NagiosConf(url, res, opts.base_dir, tag=opts.tag) for res in opts.resources]
     replacer = ConfReplacer(opts.base_dir, opts.initd, opts.bin)
