@@ -180,7 +180,8 @@ class ConfReplacer:
         changes = diff_dir.diff_files + diff_dir.left_only + diff_dir.right_only
 
         if self.print_changes:
-            print 'Changed files:'
+            if len(changes):
+                print 'Changed files:'
             for changed_file in changes:
                 if changed_file in diff_dir.left_only:
                     print 'File {0} is new.'.format(changed_file)
