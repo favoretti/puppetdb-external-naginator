@@ -4,6 +4,7 @@ import sys
 import os
 import subprocess
 import json
+import difflib
 from optparse import OptionParser
 import filecmp
 from os.path import join, exists
@@ -36,7 +37,7 @@ def run(cmd):
 
 class NagiosConf:
 
-    def __init__(self, url, dtype, base_dir, tag=''):
+    def __init__(self, url, dtype, base_dir, single_config=False, tag=''):
 
         self.tmpl = """{% set bad_params = ['notify', 'target', 'ensure', 'require', 'before', 'tag'] -%}
 {% for element in elements %}
@@ -57,6 +58,7 @@ define {{ dtype }} {
         self.base_dir = base_dir
         self.tmp_dir = os.path.join(self.base_dir, 'tmp.d')
         self.tag = tag
+        self.single_config = single_config
 
     def get_nagios_data(self, exported=True):
         """ Function for fetching data from PuppetDB """
@@ -117,20 +119,32 @@ define {{ dtype }} {
     def write(self):
         """Write config to a file in tmp.d/. File is named afther the Nagios type.
         """
-        conf_file = os.path.join(self.tmp_dir, '%s.cfg' % self.dtype)
+        if self.single_config:
+            write_mode = 'a'
+            conf_file = os.path.join(self.tmp_dir, '%s.cfg' % self.single_config)
+        else:
+            write_mode = 'w'
+            conf_file = os.path.join(self.tmp_dir, '%s.cfg' % self.dtype)
+
         if not os.path.exists(self.tmp_dir):
-            os.mkdir(self.tmp_dir)
+            try:
+                os.mkdir(self.tmp_dir)
+            except Exception, e:
+                print "Can not create temporary directory ({tmpdir}): " \
+                    "{exception}.\nExiting.".format(tmpdir=self.tmp_dir, exception=e)
+                sys.exit(1)
         config = self.get()
-        with open(conf_file, 'w') as f:
+        with open(conf_file, write_mode) as f:
             f.write(config)
 
 
 class ConfReplacer:
 
-    def __init__(self, base_dir, initd, nagios_bin):
+    def __init__(self, base_dir, initd, nagios_bin, print_changes):
         self.base_dir = base_dir
         self.initd = initd
         self.bin = nagios_bin
+        self.print_changes = print_changes
 
         self.dst_dir = join(self.base_dir, 'naginator.d')
         self.bak_dir = join(self.base_dir, 'backup.d')
@@ -164,17 +178,46 @@ class ConfReplacer:
 
         diff_dir = filecmp.dircmp(self.tmp_dir, self.dst_dir)
         changes = diff_dir.diff_files + diff_dir.left_only + diff_dir.right_only
+
+        if self.print_changes:
+            print 'Changed files:'
+            for changed_file in changes:
+                if changed_file in diff_dir.left_only:
+                    print 'File {0} is new.'.format(changed_file)
+                    continue
+
+                if changed_file in diff_dir.right_only:
+                    print 'File {0} is removed.'.format(changed_file)
+                    continue
+
+                print '*** {0}/{1}'.format(self.dst_dir, changed_file)
+                for line in difflib.unified_diff(open('{0}/{1}'.format(self.dst_dir, changed_file)).readlines(),
+                        open('{0}/{1}'.format(self.tmp_dir, changed_file)).readlines()):
+                    sys.stdout.write(line)
         return changes != []
 
     def _is_valid(self):
         # [todo] Check there are no empty files.
         conf_file = join(self.base_dir, 'nagios.cfg')
+        if not exists(self.bin):
+            raise RuntimeError("Can not find nagios binary: {0}".format(self.bin))
+
         cmd = '%s -v %s > /dev/null 2>&1' % (self.bin, conf_file)
         return run(cmd) == 0
 
     def _replace(self):
         if exists(self.bak_dir):
             rmtree(self.bak_dir)
+
+        try:
+            if not exists(self.bak_dir):
+                os.mkdir(self.bak_dir)
+            if not exists(self.dst_dir):
+                os.mkdir(self.dst_dir)
+        except Exception, e:
+                print "Can not create backup or destination directory: " \
+                    "{exception}.\nExiting.".format(tmpdir=self.tmp_dir, exception=e)
+                sys.exit(1)
 
         move(self.dst_dir, self.bak_dir)
         move(self.tmp_dir, self.dst_dir)
@@ -216,6 +259,10 @@ def main():
                       help="Nagios init.d script [default: %default]")
     parser.add_option("--noop", action="store_true", default=False,
                       help="Generate new config on tmp.d/ but don't apply it.")
+    parser.add_option("--single_config", dest="single_config", default=False,
+                      help="Place all configuration in a single file.")
+    parser.add_option("--print_changes", action="store_true", default=False,
+                      help="Place all configuration in a single file.")
 
     (opts, args) = parser.parse_args()
 
@@ -234,8 +281,8 @@ def main():
                           'serviceescalation', 'serviceextinfo',
                           'servicegroup', 'timeperiod']
 
-    conf_objs = [NagiosConf(url, res, opts.base_dir, tag=opts.tag) for res in opts.resources]
-    replacer = ConfReplacer(opts.base_dir, opts.initd, opts.bin)
+    conf_objs = [NagiosConf(url, res, opts.base_dir, opts.single_config, tag=opts.tag) for res in opts.resources]
+    replacer = ConfReplacer(opts.base_dir, opts.initd, opts.bin, opts.print_changes)
 
     # Ensure this doesn't exist, so we don't get mixed configurations between different runs.
     if exists(replacer.tmp_dir):
