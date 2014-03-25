@@ -210,17 +210,8 @@ class ConfReplacer:
         if exists(self.bak_dir):
             rmtree(self.bak_dir)
 
-        try:
-            if not exists(self.bak_dir):
-                os.mkdir(self.bak_dir)
-            if not exists(self.dst_dir):
-                os.mkdir(self.dst_dir)
-        except Exception, e:
-                print "Can not create backup or destination directory: " \
-                    "{exception}.\nExiting.".format(tmpdir=self.tmp_dir, exception=e)
-                sys.exit(1)
-
-        move(self.dst_dir, self.bak_dir)
+        if exists(self.dst_dir):
+            move(self.dst_dir, self.bak_dir)
         move(self.tmp_dir, self.dst_dir)
 
     def _rollback(self):
@@ -228,6 +219,8 @@ class ConfReplacer:
             rmtree(self.tmp_dir)
         move(self.dst_dir, self.tmp_dir)
         if exists(self.bak_dir):
+            if exists(self.dst_dir):
+                rmtree(self.dst_dir)
             move(self.bak_dir, self.dst_dir)
         raise RuntimeError('Something is wrong in the generated configuration (look at tmp.d/)')
 
