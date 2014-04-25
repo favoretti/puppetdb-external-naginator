@@ -37,7 +37,7 @@ def run(cmd):
 
 class NagiosConf:
 
-    def __init__(self, url, dtype, base_dir, single_config=False, tag=''):
+    def __init__(self, url, dtype, base_dir, single_config=False, tag='', custom=False):
 
         self.tmpl = """{% set bad_params = ['notify', 'target', 'ensure', 'require', 'before', 'tag'] -%}
 {% for element in elements %}
@@ -59,37 +59,30 @@ define {{ dtype }} {
         self.tmp_dir = os.path.join(self.base_dir, 'tmp.d')
         self.tag = tag
         self.single_config = single_config
+        self.custom = custom
 
     def get_nagios_data(self, exported=True):
         """ Function for fetching data from PuppetDB """
+
         if exported:
-            if self.tag:
-                query = """["and",
-                    ["=", "exported",  true],
-                    [ "not", ["=", ["parameter", "ensure"], "absent"]],
-                    ["=", "type", "Nagios_{dtype}"],
-                    ["=", "tag", "{tag}"],
-                    ["=", ["node", "active"], true]]""".format(dtype=self.dtype,
-                                                               tag=self.tag)
-            else:
-                query = """["and",
-                    ["=", "exported",  true],
-                    [ "not", ["=", ["parameter", "ensure"], "absent"]],
-                    ["=", "type", "Nagios_{dtype}"],
-                    ["=", ["node", "active"], true]]""".format(dtype=self.dtype)
+            exportclause = '["=", "exported",  true],'
         else:
-            if self.tag:
-                query = """["and",
-                    [ "not", ["=", ["parameter", "ensure"], "absent"]],
-                    ["=", "type", "Nagios_{dtype}"],
-                    ["=", "tag", "{tag}"],
-                    ["=", ["node", "active"], true]]""".format(dtype=self.dtype,
-                                                               tag=self.tag)
-            else:
-                query = """["and",
-                    [ "not", ["=", ["parameter", "ensure"], "absent"]],
-                    ["=", "type", "Nagios_{dtype}"],
-                    ["=", ["node", "active"], true]]""".format(dtype=self.dtype)
+            exportclause = ''
+
+        if self.tag:
+            tagclause = '["=", "tag", "{tag}"],'
+        else:
+            tagclause = ''
+
+        query = """["and",
+            {exportclause}
+            {tagclause}
+            [ "not", ["=", ["parameter", "ensure"], "absent"]],
+            ["=", "type", "Nagios_{dtype}"],
+            ["=", ["node", "active"], true]]""".format(exportclause=exportclause,
+                                                       tagclause=tagclause,
+                                                       dtype=self.dtype,
+                                                       tag=self.tag)
 
         headers = {'Accept': 'application/json'}
         # Specify an order for the resources, so we can compare (diff) results from several runs.
@@ -257,6 +250,8 @@ def main():
                       help="Place all configuration in a single file.")
     parser.add_option("--print_changes", action="store_true", default=False,
                       help="Place all configuration in a single file.")
+    parser.add_option("--custom_attributes", action="store_true", default=False,
+                      help="fetch custom nagios attributes")
 
     (opts, args) = parser.parse_args()
 
@@ -275,7 +270,7 @@ def main():
                           'serviceescalation', 'serviceextinfo',
                           'servicegroup', 'timeperiod']
 
-    conf_objs = [NagiosConf(url, res, opts.base_dir, opts.single_config, tag=opts.tag) for res in opts.resources]
+    conf_objs = [NagiosConf(url, res, opts.base_dir, opts.single_config, tag=opts.tag, custom=opts.custom_attributes) for res in opts.resources]
     replacer = ConfReplacer(opts.base_dir, opts.initd, opts.bin, opts.print_changes)
 
     # Ensure this doesn't exist, so we don't get mixed configurations between different runs.
