@@ -255,8 +255,8 @@ def main():
                       help="Generate new config on tmp.d/ but don't apply it.")
     parser.add_option("--single-config", dest="single_config", default=False,
                       help="Place all configuration in a single file.")
-    parser.add_option("--print_changes", action="store_true", default=False,
-                      help="Place all configuration in a single file.")
+    parser.add_option("--print-changes", dest="print_changes", action="store_true", default=False,
+                      help="Print unified diff of changed configuration files.")
 
     (opts, args) = parser.parse_args()
 
