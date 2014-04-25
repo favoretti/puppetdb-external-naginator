@@ -278,9 +278,10 @@ def main():
     conf_objs = [NagiosConf(url, res, opts.base_dir, opts.single_config, tag=opts.tag) for res in opts.resources]
     replacer = ConfReplacer(opts.base_dir, opts.initd, opts.bin, opts.print_changes)
 
-    # Ensure this doesn't exist, so we don't get mixed configurations between different runs.
-    if exists(replacer.tmp_dir):
-        rmtree(replacer.tmp_dir)
+    if not opts.single_config:
+        # Ensure this doesn't exist, so we don't get mixed configurations between different runs.
+        if exists(replacer.tmp_dir):
+            rmtree(replacer.tmp_dir)
 
     for conf in conf_objs:
         conf.write()
