@@ -290,12 +290,12 @@ def main():
                       help="Nagios init.d script [default: %default]")
     parser.add_option("--noop", action="store_true", default=False,
                       help="Generate new config on tmp.d/ but don't apply it.")
-    parser.add_option("--single_config", dest="single_config", default=False,
-                      help="Place all configuration in a single file.")
-    parser.add_option("--print_changes", action="store_true", default=False,
+    parser.add_option("--single-config", dest="single_config", default=False,
                       help="Place all configuration in a single file.")
     parser.add_option("--custom_attributes", action="store_true", default=False,
                       help="fetch custom nagios attributes")
+    parser.add_option("--print-changes", dest="print_changes", action="store_true", default=False,
+                      help="Print unified diff of changed configuration files.")
 
     (opts, args) = parser.parse_args()
 
@@ -317,9 +317,10 @@ def main():
     conf_objs = [NagiosConf(url, res, opts.base_dir, opts.single_config, tag=opts.tag, custom=opts.custom_attributes) for res in opts.resources]
     replacer = ConfReplacer(opts.base_dir, opts.initd, opts.bin, opts.print_changes)
 
-    # Ensure this doesn't exist, so we don't get mixed configurations between different runs.
-    if exists(replacer.tmp_dir):
-        rmtree(replacer.tmp_dir)
+    if not opts.single_config:
+        # Ensure this doesn't exist, so we don't get mixed configurations between different runs.
+        if exists(replacer.tmp_dir):
+            rmtree(replacer.tmp_dir)
 
     for conf in conf_objs:
         conf.write()
