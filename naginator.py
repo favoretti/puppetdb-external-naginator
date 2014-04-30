@@ -37,7 +37,7 @@ def run(cmd):
 
 class NagiosConf:
 
-    def __init__(self, url, dtype, base_dir, single_config=False, tag=''):
+    def __init__(self, url, dtype, base_dir, single_config=False, tag='', custom=False):
 
         self.tmpl = """{% set bad_params = ['notify', 'target', 'ensure', 'require', 'before', 'tag'] -%}
 {% for element in elements %}
@@ -59,44 +59,81 @@ define {{ dtype }} {
         self.tmp_dir = os.path.join(self.base_dir, 'tmp.d')
         self.tag = tag
         self.single_config = single_config
+        self.custom = custom
 
     def get_nagios_data(self, exported=True):
         """ Function for fetching data from PuppetDB """
+
         if exported:
-            if self.tag:
-                query = """["and",
-                    ["=", "exported",  true],
-                    [ "not", ["=", ["parameter", "ensure"], "absent"]],
-                    ["=", "type", "Nagios_{dtype}"],
-                    ["=", "tag", "{tag}"],
-                    ["=", ["node", "active"], true]]""".format(dtype=self.dtype,
-                                                               tag=self.tag)
-            else:
-                query = """["and",
-                    ["=", "exported",  true],
-                    [ "not", ["=", ["parameter", "ensure"], "absent"]],
-                    ["=", "type", "Nagios_{dtype}"],
-                    ["=", ["node", "active"], true]]""".format(dtype=self.dtype)
+            exportclause = ',["=", "exported",  true]'
         else:
-            if self.tag:
-                query = """["and",
-                    [ "not", ["=", ["parameter", "ensure"], "absent"]],
-                    ["=", "type", "Nagios_{dtype}"],
-                    ["=", "tag", "{tag}"],
-                    ["=", ["node", "active"], true]]""".format(dtype=self.dtype,
-                                                               tag=self.tag)
-            else:
-                query = """["and",
-                    [ "not", ["=", ["parameter", "ensure"], "absent"]],
-                    ["=", "type", "Nagios_{dtype}"],
-                    ["=", ["node", "active"], true]]""".format(dtype=self.dtype)
+            exportclause = ''
+
+        if self.tag:
+            tagclause = ',["=", "tag", "{tag}"]'.format(tag=self.tag)
+        else:
+            tagclause = ''
+
+        if self.custom:
+            customclause = ',["=", "tag", "Nagios_custom_{dtype}_attribute"]'.format(dtype=self.dtype)
+        else:
+            customclause = ''
+
+        query = """["and"
+            {exportclause}
+            {tagclause}
+            ,[ "not", ["=", ["parameter", "ensure"], "absent"]]
+            ,["=", ["node", "active"], true]
+            ,["or"
+              ,["=", "type", "Nagios_{dtype}"]
+              {customclause}
+            ]
+            ]""".format(exportclause=exportclause,
+                        tagclause=tagclause,
+                        dtype=self.dtype,
+                        customclause=customclause)
 
         headers = {'Accept': 'application/json'}
         # Specify an order for the resources, so we can compare (diff) results from several runs.
         payload = {'query': query, 'order-by': '[{"field": "title"}]'}
         r = requests.get(self.url, params=payload, headers=headers)
         ndata = json.loads(r.text)
+        if self.custom:
+            ndata = self._mergedata(ndata, self.dtype)
         return ndata
+
+    def _mergedata(self, ndata, dtype):
+        """merge ndata internally
+
+        When custom attributes are retrieved from puppetdb, the custom attributes will be listed under different
+        entries than the normal entries. This function merges those extra entries into the normal ones.
+        """
+        # make a lookup hash for the custom resources.
+        lookup = {}
+        for index in range(len(ndata)):
+            title = ndata[index]['title']
+            ntype = ndata[index]['type']
+            if ntype != 'Nagios_{dtype}'.format(dtype=dtype):
+                if not title in lookup.keys():
+                    lookup[title] = []
+                lookup[title].append(index)
+
+        newndata = []
+        # now loop through ndata, copy 'normal' items into a new list; and
+        # merge custom attributes into this
+        for index in range(len(ndata)):
+            title = ndata[index]['title']
+            ntype = ndata[index]['type']
+            if ntype == 'Nagios_{dtype}'.format(dtype=dtype):
+                newndataitem = ndata[index]
+                if title in lookup.keys():
+                    for customindex in lookup[title]:
+                        for customattribute in ndata[customindex]['parameters']['content']:
+                            newndataitem['parameters'][customattribute] = \
+                                ndata[customindex]['parameters']['content'][customattribute]
+                newndata.append(newndataitem)
+
+        return newndata
 
     def get(self):
         """Returns a python object with Nagios objects of type 'dtype'.
@@ -255,6 +292,8 @@ def main():
                       help="Generate new config on tmp.d/ but don't apply it.")
     parser.add_option("--single-config", dest="single_config", default=False,
                       help="Place all configuration in a single file.")
+    parser.add_option("--custom_attributes", action="store_true", default=False,
+                      help="fetch custom nagios attributes")
     parser.add_option("--print-changes", dest="print_changes", action="store_true", default=False,
                       help="Print unified diff of changed configuration files.")
 
@@ -275,7 +314,7 @@ def main():
                           'serviceescalation', 'serviceextinfo',
                           'servicegroup', 'timeperiod']
 
-    conf_objs = [NagiosConf(url, res, opts.base_dir, opts.single_config, tag=opts.tag) for res in opts.resources]
+    conf_objs = [NagiosConf(url, res, opts.base_dir, opts.single_config, tag=opts.tag, custom=opts.custom_attributes) for res in opts.resources]
     replacer = ConfReplacer(opts.base_dir, opts.initd, opts.bin, opts.print_changes)
 
     if not opts.single_config:
