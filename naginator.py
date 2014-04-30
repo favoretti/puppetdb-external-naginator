@@ -65,31 +65,75 @@ define {{ dtype }} {
         """ Function for fetching data from PuppetDB """
 
         if exported:
-            exportclause = '["=", "exported",  true],'
+            exportclause = ',["=", "exported",  true]'
         else:
             exportclause = ''
 
         if self.tag:
-            tagclause = '["=", "tag", "{tag}"],'
+            tagclause = ',["=", "tag", "{tag}"]'.format(tag=self.tag)
         else:
             tagclause = ''
 
-        query = """["and",
+        if self.custom:
+            customclause = ',["=", "tag", "Nagios_custom_{dtype}_attribute"]'.format(dtype=self.dtype)
+        else:
+            customclause = ''
+
+        query = """["and"
             {exportclause}
             {tagclause}
-            [ "not", ["=", ["parameter", "ensure"], "absent"]],
-            ["=", "type", "Nagios_{dtype}"],
-            ["=", ["node", "active"], true]]""".format(exportclause=exportclause,
-                                                       tagclause=tagclause,
-                                                       dtype=self.dtype,
-                                                       tag=self.tag)
+            ,[ "not", ["=", ["parameter", "ensure"], "absent"]]
+            ,["=", ["node", "active"], true]
+            ,["or"
+              ,["=", "type", "Nagios_{dtype}"]
+              {customclause}
+            ]
+            ]""".format(exportclause=exportclause,
+                        tagclause=tagclause,
+                        dtype=self.dtype,
+                        customclause=customclause)
 
         headers = {'Accept': 'application/json'}
         # Specify an order for the resources, so we can compare (diff) results from several runs.
         payload = {'query': query, 'order-by': '[{"field": "title"}]'}
         r = requests.get(self.url, params=payload, headers=headers)
         ndata = json.loads(r.text)
+        if self.custom:
+            ndata = self._mergedata(ndata, self.dtype)
         return ndata
+
+    def _mergedata(self, ndata, dtype):
+        """merge ndata internally
+
+        When custom attributes are retrieved from puppetdb, the custom attributes will be listed under different
+        entries than the normal entries. This function merges those extra entries into the normal ones.
+        """
+        # make a lookup hash for the custom resources.
+        lookup = {}
+        for index in range(len(ndata)):
+            title = ndata[index]['title']
+            ntype = ndata[index]['type']
+            if ntype != 'Nagios_{dtype}'.format(dtype=dtype):
+                if not title in lookup.keys():
+                    lookup[title] = []
+                lookup[title].append(index)
+
+        newndata = []
+        # now loop through ndata, copy 'normal' items into a new list; and
+        # merge custom attributes into this
+        for index in range(len(ndata)):
+            title = ndata[index]['title']
+            ntype = ndata[index]['type']
+            if ntype == 'Nagios_{dtype}'.format(dtype=dtype):
+                newndataitem = ndata[index]
+                if title in lookup.keys():
+                    for customindex in lookup[title]:
+                        for customattribute in ndata[customindex]['parameters']['content']:
+                            newndataitem['parameters'][customattribute] = \
+                                ndata[customindex]['parameters']['content'][customattribute]
+                newndata.append(newndataitem)
+
+        return newndata
 
     def get(self):
         """Returns a python object with Nagios objects of type 'dtype'.
