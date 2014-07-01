@@ -259,7 +259,8 @@ class ConfReplacer:
             if exists(self.dst_dir):
                 rmtree(self.dst_dir)
             move(self.bak_dir, self.dst_dir)
-        raise RuntimeError('Something is wrong in the generated configuration (look at tmp.d/)')
+        raise RuntimeError("Something is wrong in the generated configuration (look at tmp.d/)\n" +
+                           " run sed 's/conf.d/tmp.d/' /etc/nagios3/nagios.cfg > /tmp/nagiostest.cfg; /usr/sbin/nagios3 -v /tmp/nagiostest.cfg")
 
     def _reload(self):
         run('''%s reload > /dev/null 2>&1''' % self.initd)
