@@ -71,3 +71,14 @@ define service {
 
 When you use a custom mail script for alerting, the custom attribute is (like all attributes) exported as an environment
 variable so it can be used to grab the image from a graphing server and include it in the sent mail.
+
+# nagiosmailer.py
+
+Nagiosmailer is a script to use instead of the 'echo CRITITAL | mail'-construct that is default in most Nagios setups.
+Using nagiosmailer has a few advantages over the standard mails:
+
+ - html mails (with text alternative)
+ - threading in mails so 'OK' will end up in the same mailthread as the 'CRITICAL' mail
+ - the possibility to include graphs from munin, graphite or another graphing solution, as long as the images are 
+   available to fetch indivudually from the nagios server without password. (you will need to run naginator with
+   --custom_attributes for this)
