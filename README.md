@@ -108,6 +108,6 @@ Currently nagiosmailer only support service emails, not host emails.
  
  You can now send mails like this from nagios:
  
- ![Example HTML mail](/screenshots/examplemail.png?raw=true "Example HTML mail")
+ ![Example HTML mail](screenshots/examplemail.png?raw=true "Example HTML mail")
  
  The HTML is easily changeable in the python source
