@@ -320,7 +320,7 @@ def mailSubject(logger, prefix=None):
     return subject
 
 
-def mailHeaders(logger):
+def mailHeaders(logger, replyto):
     """generate some extra headers to assist smart mailreaders in threading
 
     the following nagios macros are used:
@@ -337,7 +337,8 @@ def mailHeaders(logger):
     msgid = getSingleEnvVar('NAGIOS_SERVICEEVENTID')
     refid = getSingleEnvVar('NAGIOS_LASTSERVICEEVENTID')
     hostname = socket.getfqdn()
-    headers = {'X-nagiosserver': hostname}
+    headers = {'X-nagiosserver': hostname,
+               'reply-to': replyto}
     if id and refid:
         headers['Message-ID'] = "<nagiosid-%s@%s>" % (msgid, hostname)
         headers['References'] = "<nagiosid-%s@%s>" % (refid, hostname)
@@ -493,7 +494,6 @@ def main():
     for option in options.__dict__:
         logger.debug("option %s is '%s'" % (option, options.__dict__[option]))
 
-    headers = mailHeaders(logger)
 
     directUrls = getMultipleEnvVars('NAGIOS__SERVICEGRAPHURL').values()
     logger.debug("found direct URLS:")
@@ -510,7 +510,11 @@ def main():
     htmlBody = mailHtmlBody(logger, graphUrls, options.bgcolor, options.fgcolor, options.name, nagiosDict)
     subject = mailSubject(logger, options.subjectPrefix)
     receiver = getSingleEnvVar('NAGIOS_CONTACTEMAIL')
+    replyto = receiver
     logger.debug("mailreceiver: %s" % receiver)
+
+    headers = mailHeaders(logger, replyto)
+
     if receiver:
         sendGraphEmail(logger,
                        graphUrls,
