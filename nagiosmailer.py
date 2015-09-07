@@ -138,7 +138,7 @@ def sendGraphEmail(logger, graph_urls, subject, sender, receiver, textBody, html
         logger.debug("graphurl to fetch is: %s", graph_url)
 
         try:
-            graph = requests.get(graph_url, timeout=timeout)
+            graph = requests.get(graph_url, timeout=timeout, verify=False)
             kind, imgtype = graph.headers['content-type'].split('/')
             logger.debug("successfully retrieved %s of type %s" % (kind, imgtype))
         except requests.exceptions.Timeout as inst:
